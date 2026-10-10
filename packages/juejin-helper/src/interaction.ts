@@ -67,7 +67,8 @@ class Interaction {
 
   async getUser(userId: string) {
     return this.http.get("/user_api/v1/user/get", {
-      params: { user_id: userId, not_self: 1, need_badge: 0, need_dislike_status: 0 }
+      // This endpoint rejects an empty aid; match the official user-profile query.
+      params: { aid: "2608", user_id: userId, not_self: 1, need_badge: 0, need_dislike_status: 0 }
     });
   }
 

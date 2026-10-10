@@ -68,6 +68,7 @@ test("state reads use official article, pin and user detail endpoints without re
   assert.deepEqual(requests[2].body, { msg_id: "45678" });
   assert.equal(requests[3].url, "/user_api/v1/user/get");
   assert.equal(requests[3].params.user_id, "98765");
+  assert.equal(requests[3].params.aid, "2608");
   assert.equal(requests[3].params.not_self, 1);
   assert.equal(interaction.getCurrentUserId(), "123");
 });
