@@ -1,7 +1,7 @@
 {
   "name": "juejin-helper",
-  "version": "1.9.0",
-  "description": "稀土掘金助手：每日签到、免费抽奖、阅读成长任务与签到活动查询。",
+  "version": "1.10.0",
+  "description": "稀土掘金助手：签到、抽奖、阅读、点赞、收藏、关注及幸运值保底任务。",
   "author": "Derek Li",
   "license": "Apache-2.0",
   "source": "src/index.ts",

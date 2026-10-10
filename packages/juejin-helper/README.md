@@ -61,6 +61,7 @@ main().catch(() => {
 | `getTodayStatus()`、`checkIn()`                    | 查询今日签到状态、执行签到。先查状态，避免重复提交。                                                              |
 | `getLotteryConfig()`、`drawLottery()`              | 查询抽奖配置、提交真实抽奖请求。使用前应检查 `free_count`，每次抽奖前重新确认；不要自动重试结果不明确的抽奖请求。 |
 | `getCounts()`、`getCurrentPoint()`、`getMyLucky()` | 查询签到统计、矿石余额和幸运值。                                                                                  |
+| `claimLuckyPrize()`                                | 领取幸运值保底奖品。先确认幸运值达到 6000；每次最多一次，不自动重试、不回收奖品。                                 |
 | `getGrowthTasks()`、`getGrowthProgress()`          | 读取掘友分任务及进度，用于判断任务上限、已完成数量和提交后的进展。                                                |
 | `getRecommendedArticles()`                         | 获取推荐文章。                                                                                                    |
 | `getArticleDetail(articleId)`                      | 使用官方服务端渲染阶段的请求参数（`req_from: 0`、`is_pre_load: true`）获取实际正文。                              |
@@ -75,7 +76,11 @@ SDK 的阅读方法只负责单次 API 调用。仓库 [每日工作流](https:/
 
 正文获取与访问记录的两阶段参数见 [官方文章页面脚本](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/27c3bf4.js)。阅读间隔依据 [官方阅读计时脚本](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/ba68fbb.js)：停留时间达到 `90000` 毫秒后才提交阅读记录；相关接口与任务枚举见 [官方公共模块](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/739e8f7.js)。任务同步调用见 [官方页面布局脚本](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/3d600ad.js)，其用途是同步已满足条件的任务，不能据此推断获得了额外奖励。
 
-## 历史接口
+## 互动接口
+
+`helper.interaction()` 提供点赞、收藏和关注所需的官方查询与写入接口，任务编排见 `workflows/tasks/engagement.js`。使用前必须查询现有状态，写入后重新检查状态和成长任务进度；SDK 单次请求成功不代表任务已经计分。工作流默认每项每天最多 2 次，可通过 `AUTO_LIKE_ARTICLES`、`AUTO_LIKE_PINS`、`AUTO_COLLECT_ARTICLES`、`AUTO_FOLLOW_USERS` 关闭，或通过 `FOLLOW_USER_IDS`、`COLLECTION_ID` 指定目标。
+
+## 历史活动与兼容接口
 
 沾喜气、BugFix、海底掘金是已下线的旧活动。`dipLucky()`、`bugfix()`、`seagold()` 等旧接口仅为历史兼容保留，当前工作流不会执行，也不再提供游戏授权指引。
 

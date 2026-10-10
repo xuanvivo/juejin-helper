@@ -1,6 +1,9 @@
 const utils = require("../utils/utils");
 const { reading } = require("./growth");
 const { checkInActivity, growthProgress } = require("./activity");
+const { likeArticles, likePins, collectArticles, followUsers } = require("./engagement");
+const { claimLucky } = require("./lucky");
+const { manualTasks } = require("./manual");
 
 async function checkIn({ growth }) {
   const checkedIn = await growth.getTodayStatus();
@@ -95,7 +98,13 @@ const dailyTasks = [
   { name: "每日签到", run: checkIn },
   { name: "签到活动", run: checkInActivity },
   { name: "免费抽奖", run: freeLottery },
+  { name: "幸运值保底", run: claimLucky },
   { name: "阅读成长任务", run: reading },
+  { name: "点赞文章", run: likeArticles },
+  { name: "点赞沸点", run: likePins },
+  { name: "收藏文章", run: collectArticles },
+  { name: "关注掘友", run: followUsers },
+  { name: "其他成长任务", run: manualTasks },
   { name: "掘友成长", run: growthProgress },
   { name: "签到统计", run: counts },
   { name: "矿石余额", run: balance },

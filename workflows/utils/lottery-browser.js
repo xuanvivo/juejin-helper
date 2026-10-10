@@ -93,6 +93,8 @@ function createLotteryBrowser(helper, options = {}) {
       const url = new URL(request.url());
       const isDraw = /(?:^|\/)[^/]*draw[^/]*(?:\/|$)/i.test(url.pathname);
       if (isDraw) {
+        // The page can start lucky_draw on load at 6000 luck. It stays blocked
+        // here, including while an ordinary free single draw is authorized.
         allow =
           !closed &&
           permitSingleDraw &&

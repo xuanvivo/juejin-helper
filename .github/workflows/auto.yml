@@ -48,6 +48,13 @@ jobs:
           TASK_MODE: ${{ inputs.mode || 'run' }}
           AUTO_READ_ARTICLES: ${{ vars.AUTO_READ_ARTICLES || 'true' }}
           READING_MAX_ARTICLES: ${{ vars.READING_MAX_ARTICLES || '5' }}
+          AUTO_LIKE_ARTICLES: ${{ vars.AUTO_LIKE_ARTICLES || 'true' }}
+          AUTO_LIKE_PINS: ${{ vars.AUTO_LIKE_PINS || 'true' }}
+          AUTO_COLLECT_ARTICLES: ${{ vars.AUTO_COLLECT_ARTICLES || 'true' }}
+          AUTO_FOLLOW_USERS: ${{ vars.AUTO_FOLLOW_USERS || 'true' }}
+          AUTO_CLAIM_LUCKY: ${{ vars.AUTO_CLAIM_LUCKY || 'true' }}
+          FOLLOW_USER_IDS: ${{ vars.FOLLOW_USER_IDS }}
+          COLLECTION_ID: ${{ vars.COLLECTION_ID }}
           COOKIE: ${{ secrets.COOKIE }}
           COOKIE_2: ${{ secrets.COOKIE_2 }}
           COOKIE_3: ${{ secrets.COOKIE_3 }}

@@ -132,6 +132,11 @@ class Growth {
     return this.http.post("/growth_api/v1/lottery_lucky/my_lucky");
   }
 
+  /** Claim one guaranteed prize only after checking the official 6000 lucky-value threshold. */
+  async claimLuckyPrize() {
+    return this.http.post("/growth_api/v1/lottery_lucky/lucky_draw", {}, { params: { aid: "", uuid: "" } });
+  }
+
   /** 掘友分成长任务；task_id=13 为阅读文章任务。 */
   async getGrowthTasks() {
     return this.http.post("/growth_api/v1/user_growth/task_list", { growth_type: 1 });

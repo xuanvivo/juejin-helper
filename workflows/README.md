@@ -52,15 +52,20 @@ export TELEGRAM_CHAT_ID
 
 不使用 Telegram 时，只设置 `COOKIE` 即可。其他账号使用同样方式设置 `COOKIE_2` 至 `COOKIE_5`，最多五个账号。不要把 Cookie、Token 或邮件授权码写入受版本控制的配置文件。
 
-| 环境变量                                   | 说明                                                         |
-| ------------------------------------------ | ------------------------------------------------------------ |
-| `COOKIE`、`COOKIE_2` 至 `COOKIE_5`         | 各账号的完整掘金登录 Cookie。                                |
-| `TELEGRAM_BOT_TOKEN`、`TELEGRAM_CHAT_ID`   | Telegram 通知的两个必填配置，支持私聊、群组和频道。          |
-| `TELEGRAM_MESSAGE_THREAD_ID`               | 可选的群组话题 ID，正整数。                                  |
-| `TG_BOT_TOKEN`、`TG_CHAT_ID`、`TG_USER_ID` | Telegram 配置别名；优先使用 `TELEGRAM_*`。                   |
-| `AUTO_READ_ARTICLES`                       | 默认 `true`；设为 `false` 关闭阅读任务。                     |
-| `READING_MAX_ARTICLES`                     | 每个账号每次最多阅读的篇数，默认 `5`，有效范围 `1` 至 `10`。 |
-| `TASK_MODE`                                | `run` 执行任务，`inspect` 只检查状态，默认 `run`。           |
+| 环境变量                                     | 说明                                                         |
+| -------------------------------------------- | ------------------------------------------------------------ |
+| `COOKIE`、`COOKIE_2` 至 `COOKIE_5`           | 各账号的完整掘金登录 Cookie。                                |
+| `TELEGRAM_BOT_TOKEN`、`TELEGRAM_CHAT_ID`     | Telegram 通知的两个必填配置，支持私聊、群组和频道。          |
+| `TELEGRAM_MESSAGE_THREAD_ID`                 | 可选的群组话题 ID，正整数。                                  |
+| `TG_BOT_TOKEN`、`TG_CHAT_ID`、`TG_USER_ID`   | Telegram 配置别名；优先使用 `TELEGRAM_*`。                   |
+| `AUTO_READ_ARTICLES`                         | 默认 `true`；设为 `false` 关闭阅读任务。                     |
+| `READING_MAX_ARTICLES`                       | 每个账号每次最多阅读的篇数，默认 `5`，有效范围 `1` 至 `10`。 |
+| `AUTO_LIKE_ARTICLES`、`AUTO_LIKE_PINS`       | 默认 `true`；分别控制点赞文章、点赞沸点，每项每天最多 2 次。 |
+| `AUTO_COLLECT_ARTICLES`、`AUTO_FOLLOW_USERS` | 默认 `true`；分别控制收藏文章、关注作者，每项每天最多 2 次。 |
+| `AUTO_CLAIM_LUCKY`                           | 默认 `true`；满 6000 幸运值时每次运行最多领取一个保底奖品。  |
+| `FOLLOW_USER_IDS`                            | 可选作者 ID 名单，用逗号或空格分隔；留空使用推荐文章作者。   |
+| `COLLECTION_ID`                              | 可选本人收藏夹 ID；留空使用本人的已有默认或第一个收藏夹。    |
+| `TASK_MODE`                                  | `run` 执行任务，`inspect` 只检查状态，默认 `run`。           |
 
 邮箱、钉钉、PushPlus、企业微信、Server 酱、飞书和 Bark 的环境变量名称与 [Actions Secrets 表](../README.md#其他通知渠道) 相同。
 
@@ -72,7 +77,7 @@ export TELEGRAM_CHAT_ID
 npm run checkin
 ```
 
-脚本检查每日签到、免费抽奖、阅读掘友分任务及账号开放的签到活动，并汇总统计和通知。各账号依次执行；单项失败会记录错误并继续处理后续任务。登录、任务或已配置的通知渠道失败时，进程返回非零退出码。
+脚本处理每日签到、免费抽奖、阅读、点赞、收藏、关注、幸运值保底及账号开放的签到活动，并汇总统计和通知。各账号依次执行；单项失败会记录错误并继续处理后续任务。登录、任务或已配置的通知渠道失败时，进程返回非零退出码。
 
 只读取任务和活动状态：
 
@@ -80,7 +85,7 @@ npm run checkin
 TASK_MODE=inspect npm run checkin
 ```
 
-`inspect` 会访问官方查询接口并输出状态，不会签到、抽奖、提交阅读、领奖或发送通知。它适合在更换 Cookie、排查活动未开放或查看后台任务进度时使用。
+`inspect` 会访问官方查询接口并输出状态，不会签到、抽奖、提交阅读、点赞、收藏、关注、领奖或发送通知。它适合在更换 Cookie、排查活动未开放或查看后台任务进度时使用。
 
 关闭阅读或修改篇数可只影响本次运行：
 
@@ -94,11 +99,21 @@ READING_MAX_ARTICLES=2 npm run checkin
 
 阅读任务会先查询后台上限与已完成数量，仅处理尚未完成的部分；每篇读取文章实际内容后等待 90 秒，提交后再次核对进度。若账号没有相应任务、当天已完成或功能被关闭，会记录跳过原因。签到活动的开放时间、资格和额外奖励以账号的官方返回结果为准。
 
+点赞、收藏和关注会产生真实账号操作，默认按推荐流选择候选，每项每天最多 2 次；已有操作会跳过，写入之后重新查询状态和任务次数，失败或结果不明时不自动重发。`FOLLOW_USER_IDS` 可限定作者名单，`COLLECTION_ID` 可指定本人收藏夹，脚本不创建收藏夹或改变可见范围。
+
+例如关闭关注，同时限定收藏夹：
+
+```bash
+AUTO_FOLLOW_USERS=false COLLECTION_ID=你的收藏夹ID npm run checkin
+```
+
+幸运值保底使用累计幸运值领取奖品，每账号每次最多一次；保留奖品供用户在“我的收获”处理，不回收矿石或自动提交地址。App 登录、上传头像、发文及评论等剩余任务仅检测并提醒，需要用户在对应页面完成。
+
 每篇阅读至少需要 90 秒，默认每账号 5 篇约需 7.5 分钟；多账号和较高篇数会延长总运行时间。本地终端会持续显示任务结果；GitHub Actions 还会把汇总写入该次运行的摘要页。
 
 ## 定时运行
 
-仓库的 [Auto 工作流](../.github/workflows/auto.yml) 每天北京时间 06:30 调度，也支持手动选择 `run` 或 `inspect`；GitHub 排队可能延后执行时间。Actions 中把账号及通知凭据设为 Secrets，把阅读开关及篇数设为普通 Variables。
+仓库的 [Auto 工作流](../.github/workflows/auto.yml) 每天北京时间 06:30 调度，也支持手动选择 `run` 或 `inspect`；GitHub 排队可能延后执行时间。Actions 中把账号及通知凭据设为 Secrets，把各任务开关、篇数、作者名单及收藏夹 ID 设为普通 Variables。
 
 本机可以通过系统的定时任务调用 `npm run checkin`；工作目录应为仓库根目录，并向进程传入需要的环境变量。凭据管理方式应避免把值写进可公开读取的脚本或任务日志。
 

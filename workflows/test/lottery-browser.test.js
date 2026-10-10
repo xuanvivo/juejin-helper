@@ -82,6 +82,7 @@ function harness(settings = {}) {
   async function navigate(kind) {
     state.navigations.push(kind);
     if (settings.navigationError) throw new Error(`Navigation error ${SECRET}`);
+    if (settings.luckyOnVisit) await request(`${API}/growth_api/v1/lottery_lucky/lucky_draw`, "POST");
     const configs = settings.configs || [configuration(1)];
     current = configs[Math.min(index++, configs.length - 1)];
     await request(`${API}${CONFIG}?aid=2608&a_bogus=mock_signature`);
@@ -114,6 +115,7 @@ function harness(settings = {}) {
   page.click = async selector => {
     state.clicks.push(selector);
     assert.equal(selector, "#turntable-item-0");
+    if (settings.luckyOnClick) await request(`${API}/growth_api/v1/lottery_lucky/lucky_draw`, "POST");
     if (settings.extraRequests) {
       await request(`${API}/growth_api/v1/lottery/ten_draw`, "POST");
       await request(`https://example.invalid${DRAW}`, "POST");
@@ -218,6 +220,19 @@ test("request interception blocks unsolicited draws and consumes one single-draw
   assert.equal(attempts.filter(request => request.decision === "continue").length, 1);
   assert.equal(attempts.filter(request => request.decision === "abort").length, 7);
   assert.equal(await h.request(`${API}${DRAW}`, "POST"), "abort");
+});
+
+test("automatic lucky prizes stay blocked during page initialization and a free-draw allowance", async t => {
+  const h = harness({ luckyOnVisit: true, luckyOnClick: true });
+  const client = createLotteryBrowser(h.helper, h.options);
+  t.after(() => client.close());
+  await client.getLotteryConfig();
+  const result = await client.drawLottery();
+  assert.equal(result.lottery_id, "prize-1");
+  const luckyRequests = h.state.requests.filter(request => request.path.endsWith("/lucky_draw"));
+  assert.equal(luckyRequests.length, 3);
+  assert.ok(luckyRequests.every(request => request.decision === "abort"));
+  assert.equal(h.state.requests.filter(request => request.path === DRAW && request.decision === "continue").length, 1);
 });
 
 test("an unsuccessful or unknown draw response closes the client without another click", async () => {

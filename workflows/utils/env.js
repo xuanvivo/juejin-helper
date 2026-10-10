@@ -13,6 +13,13 @@ module.exports = {
   TASK_MODE: env.TASK_MODE || "run",
   AUTO_READ_ARTICLES: env.AUTO_READ_ARTICLES || "true",
   READING_MAX_ARTICLES: env.READING_MAX_ARTICLES || "5",
+  AUTO_LIKE_ARTICLES: env.AUTO_LIKE_ARTICLES || "true",
+  AUTO_LIKE_PINS: env.AUTO_LIKE_PINS || "true",
+  AUTO_COLLECT_ARTICLES: env.AUTO_COLLECT_ARTICLES || "true",
+  AUTO_FOLLOW_USERS: env.AUTO_FOLLOW_USERS || "true",
+  AUTO_CLAIM_LUCKY: env.AUTO_CLAIM_LUCKY || "true",
+  FOLLOW_USER_IDS: env.FOLLOW_USER_IDS || "",
+  COLLECTION_ID: env.COLLECTION_ID || "",
   /**
    * 邮箱配置
    * user 发件人邮箱, pass, 发件人密码, to收件人

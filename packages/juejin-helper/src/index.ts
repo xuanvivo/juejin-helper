@@ -3,6 +3,7 @@ import { parseCookieTokens } from "./utils/index";
 import Cookie from "./utils/cookie";
 import Sdk from "./sdk";
 import Growth from "./growth";
+import Interaction from "./interaction";
 import SeaGold from "./seagold";
 import NumPuzz from "./numpuzz";
 import Bugfix from "./bugfix";
@@ -68,6 +69,10 @@ class JuejinHelper {
 
   growth() {
     return new Growth(this);
+  }
+
+  interaction() {
+    return new Interaction(this);
   }
 
   seagold() {

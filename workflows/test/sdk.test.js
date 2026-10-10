@@ -108,3 +108,20 @@ test("existing v1 calls retain legacy identifiers while new task calls use parse
     ]
   );
 });
+
+test("lucky prize SDK uses the dedicated claim endpoint with legacy identifiers and an empty payload", async () => {
+  let request;
+  const growth = new Growth({
+    user: {},
+    getCookie: () => "session=private",
+    getCookieTokens: () => ({ aid: "2608", uuid: "web-id" })
+  });
+  growth.http.defaults.adapter = async config => {
+    request = config;
+    return response({ err_no: 0, data: { history_id: "12345" } }, config);
+  };
+  await growth.claimLuckyPrize();
+  assert.equal(request.url, "/growth_api/v1/lottery_lucky/lucky_draw");
+  assert.deepEqual(JSON.parse(request.data), {});
+  assert.deepEqual(request.params, { aid: "", uuid: "" });
+});

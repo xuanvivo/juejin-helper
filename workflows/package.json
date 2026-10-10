@@ -1,8 +1,8 @@
 {
   "name": "workflows",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "private": true,
-  "description": "掘金每日任务、阅读成长任务、活动检测与 Telegram 等多渠道通知。",
+  "description": "掘金每日任务、阅读与互动成长、幸运值保底、活动检测及 Telegram 通知。",
   "author": "Derek Li",
   "scripts": {
     "test": "node --require ts-node/register --test test/*.test.js",
@@ -12,7 +12,7 @@
   "dependencies": {
     "axios": "^0.34.0",
     "fast-astar": "^1.0.6",
-    "juejin-helper": "1.9.0",
+    "juejin-helper": "1.10.0",
     "nodemailer": "^10.0.16",
     "typescript": "^4.7.4"
   },
