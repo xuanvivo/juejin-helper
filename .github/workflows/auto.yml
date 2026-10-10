@@ -26,7 +26,7 @@ env:
 jobs:
   CheckIn:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
         with:
@@ -46,6 +46,8 @@ jobs:
         run: npm run checkin
         env:
           TASK_MODE: ${{ inputs.mode || 'run' }}
+          AUTO_READ_ARTICLES: ${{ vars.AUTO_READ_ARTICLES || 'true' }}
+          READING_MAX_ARTICLES: ${{ vars.READING_MAX_ARTICLES || '5' }}
           COOKIE: ${{ secrets.COOKIE }}
           COOKIE_2: ${{ secrets.COOKIE_2 }}
           COOKIE_3: ${{ secrets.COOKIE_3 }}

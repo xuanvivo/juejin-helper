@@ -75,6 +75,19 @@ function safeErrorMessage(error: any): string {
     .slice(0, 200);
 }
 
+/** Check documented business codes without exposing response bodies or credentials. */
+function assertResponseCodes(channel: string, data: any, successCodes: { [field: string]: number }) {
+  for (const field of Object.keys(successCodes)) {
+    const value = data?.[field];
+    // Older webhook implementations may omit these fields; preserve their response contract.
+    if (value === undefined || value === null) continue;
+    const code = typeof value === "string" && /^-?\d+$/.test(value) ? Number(value) : value;
+    if (code === successCodes[field]) continue;
+    const detail = Number.isSafeInteger(code) ? `（错误码 ${code}）` : "";
+    throw new Error(`${channel} 接口返回失败${detail}，请检查通知配置或服务状态。`);
+  }
+}
+
 function splitTelegramMessage(message: string): string[] {
   // UTF-16 length is a conservative bound for Telegram's 4096-character limit.
   // Segmenter also keeps family, flag and skin-tone emoji together on Node 16+.
@@ -287,12 +300,14 @@ export class NotificationKit {
       timestamp: ""
     };
 
-    return axios.post("http://www.pushplus.plus/send", config, {
+    const response = await axios.post("http://www.pushplus.plus/send", config, {
       timeout: REQUEST_TIMEOUT,
       headers: {
         "Content-Type": "application/json"
       }
     });
+    assertResponseCodes("PushPlus", response.data, { code: 200 });
+    return response;
   }
 
   /**
@@ -311,12 +326,14 @@ export class NotificationKit {
       channel: "9"
     };
 
-    return axios.post(`https://sctapi.ftqq.com/${token}.send`, config, {
+    const response = await axios.post(`https://sctapi.ftqq.com/${token}.send`, config, {
       timeout: REQUEST_TIMEOUT,
       headers: {
         "Content-Type": "application/json"
       }
     });
+    assertResponseCodes("Server酱", response.data, { code: 0 });
+    return response;
   }
 
   /**
@@ -329,7 +346,7 @@ export class NotificationKit {
       throw new Error("未配置钉钉Webhook。");
     }
 
-    return axios.post(
+    const response = await axios.post(
       url as string,
       {
         msgtype: "text",
@@ -339,6 +356,8 @@ export class NotificationKit {
       },
       { timeout: REQUEST_TIMEOUT }
     );
+    assertResponseCodes("钉钉", response.data, { errcode: 0 });
+    return response;
   }
 
   /**
@@ -351,7 +370,7 @@ export class NotificationKit {
       throw new Error("未配置飞书Webhook。");
     }
 
-    return axios.post(
+    const response = await axios.post(
       url as string,
       {
         msg_type: "interactive",
@@ -374,6 +393,8 @@ export class NotificationKit {
       },
       { timeout: REQUEST_TIMEOUT }
     );
+    assertResponseCodes("飞书", response.data, { code: 0, StatusCode: 0 });
+    return response;
   }
 
   /**
@@ -386,7 +407,7 @@ export class NotificationKit {
       throw new Error("未配置企业微信Webhook。");
     }
 
-    return axios.post(
+    const response = await axios.post(
       url as string,
       {
         msgtype: "text",
@@ -396,6 +417,8 @@ export class NotificationKit {
       },
       { timeout: REQUEST_TIMEOUT }
     );
+    assertResponseCodes("微信", response.data, { errcode: 0 });
+    return response;
   }
 
   async weixinWebhook(options: WeiXinOptions) {
@@ -427,7 +450,9 @@ export class NotificationKit {
 
     const pushUrl = `${baseUrl}${title}/${content}`;
 
-    return axios.get(pushUrl, { timeout: REQUEST_TIMEOUT });
+    const response = await axios.get(pushUrl, { timeout: REQUEST_TIMEOUT });
+    assertResponseCodes("Bark", response.data, { code: 200 });
+    return response;
   }
 
   async checkupdate() {

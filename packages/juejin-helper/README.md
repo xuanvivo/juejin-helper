@@ -1,175 +1,88 @@
-<section align="center">
-  <a href="https://github.com/iDerekLi/juejin-helper" target="_blank">
-    <img src="../../resources/logo.svg" alt="稀土掘金" width="260" />
-  </a>
-</section>
+# JuejinHelper SDK
 
-<h1 align="center">JuejinHelper-稀土掘金助手</h1>
+本仓库维护的掘金 API SDK，供每日工作流及自定义脚本使用。完整自动任务与 Telegram 配置见 [主文档](https://github.com/xuanvivo/juejin-helper#readme)。
 
-<p align="center">签到、抽奖、沾喜气、海底掘金游戏、自动化工作流。</p>
+## 使用本仓库版本
 
-## 示例
+使用 Node.js 24 LTS，在完整仓库的根目录执行：
 
-### 签到示例
-```javascript
-const JuejinHelper = require("juejin-helper");
-
-async function run() {
-  const juejin = new JuejinHelper();
-  await juejin.login("你的掘金Cookie");
-
-  const growth = juejin.growth();
-
-  // 签到
-  await growth.checkIn();
-
-  // 获取当前矿石数
-  // await growth.getCurrentPoint();
-
-  // 获取统计签到天数
-  // await growth.getCounts();
-
-  // 获取今日签到状态
-  // await growth.getTodayStatus();
-
-  // 获取抽奖配置
-  // await growth.getLotteryConfig();
-
-  // 抽奖
-  // await growth.drawLottery();
-
-  // 获取抽奖幸运用户
-  // await growth.getLotteriesLuckyUsers({ page_no = 1, page_size = 5 }); // => { lotteries: [{ lottery_history_id }, ...] }
-
-  // 获取我的幸运值
-  // await growth.getMyLucky();
-
-  // 沾喜气
-  // await growth.dipLucky(lottery_history_id); // => { has_dip, dip_value, total_value, dip_action }
-
-  await juejin.logout();
-}
-
-run();
+```bash
+PUPPETEER_SKIP_DOWNLOAD=true npm ci
+npm run build
 ```
 
-### 海底掘金游戏示例
-```javascript
-const JuejinHelper = require("juejin-helper");
+npm workspaces 会把 `juejin-helper` 链接到本目录。仓库内脚本使用 `require("juejin-helper")` 加载本地构建；无需单独安装远端 npm 包。依赖以根 `package-lock.json` 为准，旧 `yarn.lock` 不再维护。
 
-async function run() {
-  const juejin = new JuejinHelper();
-  await juejin.login("你的掘金Cookie");
+## 签到示例
 
-  const seagold = juejin.seagold();
-
-  await seagold.gameLogin(); // 登陆游戏
-  
-  let gameInfo = null;
-
-  const info = await seagold.gameInfo(); // 游戏状态
-  if (info.gameStatus === 1) {
-    gameInfo = info.gameInfo; // 继续游戏
-  } else {
-    gameInfo = await seagold.gameStart(); // 开始游戏
-  }
-
-  const command = ["U", "L"];
-  await seagold.gameCommand(gameInfo.gameId, command); // 执行命令
-
-  const result = await seagold.gameOver(); // 游戏结束
-  console.log(result); // => { ... }
-
-  await juejin.logout();
-}
-
-run();
-```
-
-### bugfix 游戏示例
-```javascript
-const JuejinHelper = require("juejin-helper");
-
-async function run() {
-  const juejin = new JuejinHelper();
-  await juejin.login("你的掘金Cookie");
-
-  const bugfix = juejin.bugfix();
-
-  const notCollectBugList = await bugfix.getNotCollectBugList();
-  await bugfix.collectBugBatch(notCollectBugList);
-  console.log(`收集Bug ${notCollectBugList.length}`);
-
-  const competition = await bugfix.getCompetition();
-  const bugfixInfo = await bugfix.getUser(competition);
-  console.log(`未消除Bug数量 ${bugfixInfo.user_own_bug}`);
-}
-```
-
-### SDK示例
+先通过环境变量提供 `COOKIE`，再在仓库中运行示例。不要把真实 Cookie 写进脚本。
 
 ```javascript
 const JuejinHelper = require("juejin-helper");
 
-async function run() {
-  const juejin = new JuejinHelper();
-  await juejin.login("你的掘金Cookie");
+async function main() {
+  const cookie = process.env.COOKIE;
+  if (!cookie) throw new Error("请通过环境变量提供 COOKIE");
 
-  const sdk = juejin.sdk();
-
-  await sdk.slardarSDKSetting(); // SDK设置
-  await sdk.list(/* events */); // 埋点数据
-}
-
-run();
-```
-
-### Browser 浏览器访问示例
-```javascript
-const JuejinHelper = require("juejin-helper");
-
-async function run() {
-  const juejin = new JuejinHelper();
-  await juejin.login("你的掘金Cookie");
-
-  const browser = juejin.browser();
-
-  await browser.open();
-
+  const helper = new JuejinHelper();
   try {
-    await browser.visitPage("/");
-    console.log("掘金首页：页面访问成功");
-  } catch (e) {
-    console.log("掘金首页：页面访问失败");
+    await helper.login(cookie);
+    const growth = helper.growth();
+    const checkedIn = await growth.getTodayStatus();
+    if (typeof checkedIn !== "boolean") throw new Error("签到状态返回格式异常");
+
+    if (checkedIn) {
+      console.log("今日已签到");
+    } else {
+      const result = await growth.checkIn();
+      console.log("本次签到增加矿石：", result.incr_point);
+    }
+    console.log("签到统计：", await growth.getCounts());
+  } finally {
+    await helper.logout();
   }
-
-  try {
-    await browser.visitPage("/user/center/signin");
-    console.log("掘金每日签到：页面访问成功");
-  } catch (e) {
-    console.log("掘金每日签到：页面访问失败");
-  }
-
-  // const page = await browser.visitPage("/");
-  // const screenshotBuffer = await page.screenshot(); // 获取页面快照
-
-  await browser.close();
 }
+
+main().catch(() => {
+  // 不直接打印请求错误对象，避免输出认证头或凭据。
+  console.error("运行失败，请检查 Cookie、网络或官方接口状态");
+  process.exitCode = 1;
+});
 ```
 
-## 问题
+每个账号应使用独立的 `JuejinHelper` 实例。`logout()` 清理该实例中的本地 Cookie 和用户状态，不会退出浏览器中的掘金会话。
 
-### 如何获取Cookie
+## 任务与查询接口
 
-掘金网站Cookie, 打开浏览器，登录 [掘金](https://juejin.cn/), 打开控制台DevTools(快捷键F12) -> Network，复制 cookie, **掘金Cookie有效期约1个月需定期更新.**
+通过 `helper.growth()` 获取成长任务接口。API 客户端会检查官方响应中的 `err_no`；登录验证页、异常响应和业务错误会作为失败处理。
 
-DevTools截图:
-<img width="1156" alt="getcookie" src="https://user-images.githubusercontent.com/24502299/152626917-26aca423-4e9c-48c9-be06-d228af5a492b.png">
+| 方法                                                      | 用途与调用约束                                                                                                      |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `getTodayStatus()`、`checkIn()`                           | 查询今日签到状态、执行签到。先查状态，避免重复提交。                                                                |
+| `getLotteryConfig()`、`drawLottery()`                     | 查询抽奖配置、提交真实抽奖请求。使用前应检查 `free_count`，每次抽奖前重新确认；不要自动重试结果不明确的抽奖请求。   |
+| `getCounts()`、`getCurrentPoint()`、`getMyLucky()`        | 查询签到统计、矿石余额和幸运值。                                                                                    |
+| `getGrowthTasks()`、`getGrowthProgress()`                 | 读取掘友分任务及进度，用于判断任务上限、已完成数量和提交后的进展。                                                  |
+| `getRecommendedArticles()`、`getArticleDetail(articleId)` | 获取推荐文章和实际文章内容。                                                                                        |
+| `reportArticleRead(articleId)`                            | 提交 `growth_type: 1`、`task_id: 13` 的阅读记录。仅应在获取内容并完成至少 90 秒的阅读间隔后调用，随后重新核对进度。 |
+| `getCheckInActivity()`、`getTodayStatusV2()`              | 查询账号的签到活动及新版签到状态。                                                                                  |
+| `completeAvailableTasks()`                                | 按官方页面的流程同步当前可完成任务；是否生效及奖励情况取决于账号活动状态。                                          |
 
-## 赞赏
-### ☕️微信赞赏！鼓励升级！
-<img src="https://user-images.githubusercontent.com/24502299/150144723-863ad914-3849-40df-8857-5ec5cd60cacd.JPG" alt="微信赞赏" width="300" />
+签到活动查询使用官方 `/user_api/v1/task/get` 的 `lt_task_type: 1`，同步接口为 `/user_api/v1/task/complete`。这些接口不保证所有账号都有活动，也不能只根据同步请求成功就认定获得奖励。
 
-## 许可
+SDK 的阅读方法只负责单次 API 调用。仓库 [每日工作流](https://github.com/xuanvivo/juejin-helper/tree/main/workflows) 负责等待 90 秒、按剩余任务控制篇数、跳过已完成任务、核验进度及发送通知；默认每账号每次最多 5 篇，可通过 `READING_MAX_ARTICLES` 设置为 `1` 至 `10`，或用 `AUTO_READ_ARTICLES=false` 关闭。
 
-[Apache-2.0](./LICENSE)
+阅读间隔依据 [掘金官方阅读页面脚本](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/ba68fbb.js)：停留时间达到 `90000` 毫秒后才提交阅读记录；相关接口与任务枚举见 [官方公共模块](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/739e8f7.js)。任务同步调用见 [官方页面布局脚本](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/3d600ad.js)，其用途是同步已满足条件的任务，不能据此推断获得了额外奖励。
+
+## 历史接口
+
+沾喜气、BugFix、海底掘金是已下线的旧活动。`dipLucky()`、`bugfix()`、`seagold()` 等旧接口仅为历史兼容保留，当前工作流不会执行，也不再提供游戏授权指引。
+
+`browser()` 与旧埋点 `sdk()` 接口仍保留供已有调用方使用，当前每日任务无需这些接口。安装时设置 `PUPPETEER_SKIP_DOWNLOAD=true` 会跳过浏览器下载；如果自定义脚本确实需要浏览器，应自行准备适配的浏览器环境。
+
+## 开发与许可
+
+离线测试从仓库根目录运行 `npm test`；本目录原有的 `test:*` 示例可能访问真实接口，不属于该离线测试集合。贡献流程见 [CONTRIBUTING.md](https://github.com/xuanvivo/juejin-helper/blob/main/CONTRIBUTING.md)。
+
+基于 [iDerekLi/juejin-helper](https://github.com/iDerekLi/juejin-helper)，感谢 Derek Li 和所有贡献者。
+
+[Apache License 2.0](./LICENSE)

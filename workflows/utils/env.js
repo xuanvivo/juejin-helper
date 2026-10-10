@@ -11,6 +11,8 @@ module.exports = {
   COOKIE_5: env.COOKIE_5,
   /* run 执行任务，inspect 只读取状态 */
   TASK_MODE: env.TASK_MODE || "run",
+  AUTO_READ_ARTICLES: env.AUTO_READ_ARTICLES || "true",
+  READING_MAX_ARTICLES: env.READING_MAX_ARTICLES || "5",
   /**
    * 邮箱配置
    * user 发件人邮箱, pass, 发件人密码, to收件人

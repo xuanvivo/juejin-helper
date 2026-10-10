@@ -24,9 +24,26 @@ async function inspect(options = {}) {
       const growth = helper.growth();
       const tasks = await growth.getGrowthTasks();
       const progress = await growth.getGrowthProgress();
+      const groups = Object.fromEntries(
+        Object.entries(tasks.growth_tasks).map(([key, group]) => [
+          key,
+          group.map(task => ({
+            task_id: task.task_id,
+            title: task.title,
+            done: task.done,
+            limit: task.limit,
+            score: task.score
+          }))
+        ])
+      );
       log(
         JSON.stringify(
-          { account: index + 1, growth_tasks: tasks.growth_tasks, today_jscore: tasks.today_jscore, progress },
+          {
+            account: index + 1,
+            growth_tasks: groups,
+            today_jscore: tasks.today_jscore,
+            progress: { current_level: progress.current_level, current_score: progress.current_score }
+          },
           null,
           2
         )
@@ -112,7 +129,15 @@ async function run(options = {}) {
 
 if (require.main === module) {
   const env = require("./utils/env");
-  (env.TASK_MODE === "inspect" ? inspect() : run())
+  const execute =
+    env.TASK_MODE === "inspect"
+      ? inspect
+      : env.TASK_MODE === "run"
+      ? run
+      : async () => {
+          throw new Error("TASK_MODE 仅支持 run 或 inspect");
+        };
+  execute()
     .then(result => {
       process.exitCode = result.ok ? 0 : 1;
     })

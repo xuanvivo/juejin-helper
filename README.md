@@ -1,83 +1,113 @@
-<section align="center">
-  <a href="https://github.com/iDerekLi/juejin-helper" target="_blank">
+<p align="center">
+  <a href="https://github.com/xuanvivo/juejin-helper">
     <img src="./resources/logo.svg" alt="稀土掘金" width="260" />
   </a>
-</section>
+</p>
 
-<h1 align="center">JuejinHelper-稀土掘金助手</h1>
+# JuejinHelper · 掘金助手
 
-<p align="center">签到、抽奖、沾喜气、消除Bug、海底掘金游戏、自动化工作流。</p>
+自动处理掘金每日签到、免费抽奖、阅读掘友分任务和开放中的签到活动，并通过 Telegram 等渠道推送结果。支持 GitHub Actions 定时运行与本地运行。
 
-## 通知
-✨ 自动化工作流，新增飞书推送。 \
-🔈 海底掘金游戏官方已下线 `juejin-helper >= 1.7.3`
+## 功能
 
-## 如何使用?
-使用自动化工作流有两种方式：快速使用(在线) 和 私有化部署(本地)
+| 功能           | 行为                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 每日签到       | 先检查今日状态，已签到时跳过，汇总接口返回的矿石奖励。                                                                          |
+| 免费抽奖       | 每次抽奖前重新检查免费次数；没有免费机会时跳过。                                                                                |
+| 阅读掘友分任务 | 按后台任务上限与已完成进度决定剩余数量；每篇获取真实文章内容后等待 90 秒，再提交阅读记录并检查进度。默认每个账号每次最多 5 篇。 |
+| 签到活动       | 查询当前账号的限时签到活动，展示实际状态并同步服务端已满足条件的任务；额外奖励以官方返回为准。                                  |
+| 统计与通知     | 汇总签到天数、矿石余额、幸运值以及各任务的成功、跳过、失败结果；发送通知并写入 Actions 运行摘要。                               |
+| 多账号         | 支持 `COOKIE`、`COOKIE_2` 至 `COOKIE_5`，各账号独立处理；一个任务或账号失败后继续处理其余任务。                                 |
 
-- 快速使用自动化：[阅读 使用](#使用)
-- 私有化部署自动化：[见 workflows](./workflows/README.md)
-- 除上诉两种之外，如您喜欢也可以自定义脚本：[npm juejin-helper](https://www.npmjs.com/package/juejin-helper)
+沾喜气、BugFix、海底掘金属于已下线的旧活动，相关代码仅保留用于历史兼容，当前每日流程不执行这些活动。
 
-## 使用
+## GitHub Actions 配置
 
-自动化执行任务: 掘金每日签到, 沾喜气, 免费抽奖, 消除Bug, 海底掘金游戏, 最后将结果报告邮件通知订阅人。\
-自动化运行时间: 北京时间上午06:30
+1. 打开本仓库的 [Actions Secrets 设置](https://github.com/xuanvivo/juejin-helper/settings/secrets/actions)，添加下面的 Repository secrets。使用 Fork 时，请在你自己的仓库配置。
+2. 打开 [Actions → Auto](https://github.com/xuanvivo/juejin-helper/actions/workflows/auto.yml)，如页面提示，启用工作流。
+3. 点击 **Run workflow**，选择 `run` 执行任务，或选择 `inspect` 只查看任务与活动状态。
 
-1. [Fork 仓库](https://github.com/iDerekLi/juejin-helper)
+`Auto` 每天按北京时间 **06:30** 调度，GitHub 排队可能使实际开始时间延后。手动和定时运行使用同一并发组，避免同时处理同一批账号。
 
-2. 仓库 -> Settings -> Secrets -> New repository secret, 添加Secrets变量如下:
+| Secret                                         | 用途                                                    |
+| ---------------------------------------------- | ------------------------------------------------------- |
+| `COOKIE`                                       | 掘金登录 Cookie，运行任务必需。                         |
+| `COOKIE_2`、`COOKIE_3`、`COOKIE_4`、`COOKIE_5` | 可选的其他掘金账号，每项放一个账号的 Cookie。           |
+| `TELEGRAM_BOT_TOKEN`                           | Telegram 机器人 Token，与 `TELEGRAM_CHAT_ID` 一起配置。 |
+| `TELEGRAM_CHAT_ID`                             | 接收通知的私聊、群组或频道 ID；群组 ID 可以是负数。     |
+| `TELEGRAM_MESSAGE_THREAD_ID`                   | 可选，群组论坛话题 ID，填写正整数。                     |
 
-   | Name | Value | Required |
-   | --- | --- | --- |
-   | COOKIE | 掘金网站Cookie  | 是 |
-   | COOKIE_2 | 多用户, 当需要同时运行多个掘金用户时所需, 支持最多 **5** 名用户(即COOKIE + COOKIE_2 - COOKIE_5)  | 否 |
-   | EMAIL_USER | 发件人邮箱地址(需要开启 SMTP) | 否 |
-   | EMAIL_PASS | 发件人邮箱密码(SMTP密码) | 否 |
-   | EMAIL_TO | 订阅人邮箱地址(收件人). 如需多人订阅使用 `, ` 分割, 例如: `a@163.com, b@qq.com` | 否 |
-   | DINGDING_WEBHOOK | 钉钉机器人WEBHOOK | 否 |
-   | PUSHPLUS_TOKEN | [Pushplus](http://www.pushplus.plus/) 官网申请，支持微信消息推送 | 否 |
-   | SERVERPUSHKEY | [Server酱](https://sct.ftqq.com/) 官网申请，支持微信消息推送 | 否 |
-   |   WEIXIN_WEBHOOK | 企业微信机器人WEBHOOK | 否 |
-   | FEISHU_WEBHOOK | 飞书机器人WEBHOOK | 否 |
-   | BARK_WEBHOOK | [Bark](https://bark.day.app/)，支持自部署的 iOS 通知工具，环境变量中填写完整URL，如`https://api.day.app/abcdedfg/` | 否 |
+Telegram 机器人可通过 [BotFather](https://t.me/BotFather) 创建。私聊接收通知前，先向机器人发送 `/start`；群组或频道接收通知时，先加入机器人并授予发送消息的权限。Token 和 Chat ID 都配置后，`run` 模式会推送任务汇总。
 
-4. 仓库 -> Actions, 检查Workflows并启用。
+兼容 `TG_BOT_TOKEN`、`TG_CHAT_ID` 和 `TG_USER_ID`；同时配置时，优先使用 `TELEGRAM_BOT_TOKEN`、`TELEGRAM_CHAT_ID`。长通知会自动分段，支持中文和 emoji。
 
-## 预览
+### 阅读任务设置
 
-| 掘金每日签到 | 海底掘金游戏 |
-|:-----------:| :-------------:|
-| ![掘金每日签到](https://user-images.githubusercontent.com/24502299/156475511-342cfcd8-3b66-4b9c-8614-215e0b4e08a1.jpg) | ![海底掘金游戏](https://user-images.githubusercontent.com/24502299/156475550-c8cc459a-3b27-4ca6-a07b-902b65bea7a9.jpg) |
+在 [Actions Variables 设置](https://github.com/xuanvivo/juejin-helper/settings/variables/actions) 添加普通 Repository variables 即可调整，不需要把它们设为 Secrets。
 
-## 问题
+| Variable               | 默认值 | 说明                                                    |
+| ---------------------- | ------ | ------------------------------------------------------- |
+| `AUTO_READ_ARTICLES`   | `true` | 设置为 `false` 关闭自动阅读。                           |
+| `READING_MAX_ARTICLES` | `5`    | 每个账号每次运行的阅读上限，取值为 `1` 至 `10` 的整数。 |
 
-### 如何获取Cookie
+实际执行数量还受后台剩余任务限制。当天任务已完成时会跳过，提交后会重新读取进度；进度没有增加时会在结果中说明，不把单次 HTTP 请求成功当成任务完成。每篇至少等待 90 秒，默认 5 篇约需 7.5 分钟；增加账号或篇数会相应延长运行。
 
-掘金网站Cookie, 打开浏览器，登录 [掘金](https://juejin.cn/), 打开控制台DevTools(快捷键F12) -> Network，复制 cookie, **掘金Cookie有效期约1个月需定期更新.**
+### 其他通知渠道
 
-DevTools截图:
-<img width="1156" alt="getcookie" src="./resources/getcookie.png">
+以下渠道仍可使用，可与 Telegram 同时配置。未配置的渠道会跳过；一个渠道发送失败后仍会等待其他渠道发送完毕。
 
-### 如何授权海底掘金游戏
+| Secret             | 用途                                                         |
+| ------------------ | ------------------------------------------------------------ |
+| `EMAIL_USER`       | 发件邮箱，需要开启 SMTP。                                    |
+| `EMAIL_PASS`       | 邮箱的 SMTP 授权码或对应凭据。                               |
+| `EMAIL_TO`         | 收件邮箱；多个地址用逗号分隔。邮件通知需同时配置上述三项。   |
+| `DINGDING_WEBHOOK` | 钉钉机器人 Webhook。                                         |
+| `PUSHPLUS_TOKEN`   | [PushPlus](https://www.pushplus.plus/) Token。               |
+| `WEIXIN_WEBHOOK`   | 企业微信机器人 Webhook。                                     |
+| `SERVERPUSHKEY`    | [Server 酱](https://sct.ftqq.com/) SendKey。                 |
+| `FEISHU_WEBHOOK`   | 飞书机器人 Webhook。                                         |
+| `BARK_WEBHOOK`     | [Bark](https://bark.day.app/) 完整推送地址，支持自部署地址。 |
 
-运行自动化后通知订阅人 `玩家未授权, 请前往掘金授权!`, 说明您是新玩家从始至终未进行海底掘金游戏, 需要先进行游戏授权.
+### 查看结果与排错
 
-授权步骤: 登陆 [掘金](https://juejin.cn/) -> 每日签到 -> 海底掘金挑战赛(点击进入游戏, 点击授权, 最好再随意玩一局). 后续就可以由掘金助手自动处理.
+- `run` 会实际执行任务、发送已配置的通知，并生成 Actions 摘要。任务、登录或通知失败时，工作流会显示失败，请查看对应条目。
+- `inspect` 只读取任务、进度和活动状态，在任务步骤日志中输出检查结果；不会签到、抽奖、提交阅读、领奖或发送通知。
+- 显示“暂无签到限时活动”时，表示账号当前未开放对应活动，不代表每日签到失败。
+- Cookie 过期时，在 Secrets 中更新对应账号的 Cookie 后重新运行。
+- Telegram 未收到通知时，检查任务日志中的 Telegram 结果、两个必填 Secrets、接收会话 ID 和机器人的发言权限；话题 ID 仅用于支持话题的群组。
 
-或点击👇这个海报帮您直达海底掘金挑战赛
+### 获取 Cookie
 
-[![海底掘金挑战赛](https://user-images.githubusercontent.com/24502299/151397151-0d69998a-2310-4a32-945f-c8e0035ed65d.png)](https://juejin.cn/game/haidijuejin/)
+登录 [掘金](https://juejin.cn/)，打开浏览器开发者工具的 **Network** 面板，选择一个发送到 `api.juejin.cn` 的请求，在 **Request Headers** 中复制完整的 `Cookie` 值。Cookie 有效期由登录状态决定，过期后需要重新获取。
 
-## 贡献
+只把 Cookie 和机器人 Token 放入 Actions Secrets 或本机环境变量；不要写入 `workflows/utils/env.js`、提交到 Git，也不要贴到公开日志或 Issue。
 
-这个项目的存在要感谢所有做出贡献的人。 请先阅读 [[Contribute](CONTRIBUTING.md)]。  
-您可以将任何想法作为 [拉取请求](https://github.com/iDerekLi/juejin-helper/pulls) 或 [GitHub问题](https://github.com/iDerekLi/juejin-helper/issues) 提交。
+## 本地运行
 
-## 赞赏
-### ☕️微信赞赏！
-<img src="https://user-images.githubusercontent.com/24502299/150144723-863ad914-3849-40df-8857-5ec5cd60cacd.JPG" alt="微信赞赏" width="300" />
+使用 **Node.js 24 LTS**，在完整仓库的根目录执行。以下交互示例适用于 Bash：
+
+```bash
+git clone https://github.com/xuanvivo/juejin-helper.git
+cd juejin-helper
+PUPPETEER_SKIP_DOWNLOAD=true npm ci
+npm run build
+npm test
+read -rsp '掘金 Cookie: ' COOKIE
+printf '\n'
+export COOKIE
+npm run checkin
+```
+
+通知配置同样通过环境变量提供。只检查状态时使用 `TASK_MODE=inspect npm run checkin`；详细设置见 [本地工作流说明](./workflows/README.md)。
+
+工作流使用 npm workspaces 链接并构建本仓库的 SDK。依赖以根目录 `package-lock.json` 为准；两个 `yarn.lock` 仅作为历史文件保留，不再维护。`PUPPETEER_SKIP_DOWNLOAD=true` 用于跳过旧浏览器下载，当前每日任务不需要启动浏览器。
+
+## 开发与致谢
+
+开发说明见 [CONTRIBUTING.md](./CONTRIBUTING.md)，自定义脚本见 [SDK 使用说明](./packages/juejin-helper/README.md)。问题与建议可提交到本仓库的 [Issues](https://github.com/xuanvivo/juejin-helper/issues) 或 [Pull requests](https://github.com/xuanvivo/juejin-helper/pulls)。
+
+本项目基于 [iDerekLi/juejin-helper](https://github.com/iDerekLi/juejin-helper)，感谢原作者 Derek Li 及所有贡献者。
 
 ## 许可
 
-[MIT](./LICENSE)
+[Apache License 2.0](./LICENSE)

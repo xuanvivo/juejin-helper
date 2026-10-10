@@ -1,4 +1,6 @@
 const utils = require("../utils/utils");
+const { reading } = require("./growth");
+const { checkInActivity, growthProgress } = require("./activity");
 
 async function checkIn({ growth }) {
   const checkedIn = await growth.getTodayStatus();
@@ -15,24 +17,31 @@ async function freeLottery({ growth, wait }) {
   let drawn = 0;
   let budget;
 
-  // Do not retry a draw on network failure: it may already have consumed the free attempt.
-  while (drawn < 10 && (budget === undefined || drawn < budget)) {
-    const config = await growth.getLotteryConfig();
-    if (!config || !Number.isSafeInteger(config.free_count) || config.free_count < 0) {
-      throw new Error("免费抽奖次数返回格式异常，已停止抽奖");
-    }
-    if (budget === undefined) budget = Math.min(config.free_count, 10);
-    if (config.free_count === 0 || drawn >= budget) break;
+  try {
+    // Do not retry a draw on network failure: it may already have consumed the free attempt.
+    while (drawn < 10 && (budget === undefined || drawn < budget)) {
+      const config = await growth.getLotteryConfig();
+      if (!config || !Number.isSafeInteger(config.free_count) || config.free_count < 0) {
+        throw new Error("免费抽奖次数返回格式异常，已停止抽奖");
+      }
+      if (budget === undefined) budget = Math.min(config.free_count, 10);
+      if (config.free_count === 0 || drawn >= budget) break;
 
-    const result = await growth.drawLottery();
-    drawn++;
-    if (!result || result.lottery_id === undefined) throw new Error("抽奖结果返回格式异常，请到掘金确认");
-    const prize = (Array.isArray(config.lottery) ? config.lottery : []).find(
-      item => String(item.lottery_id) === String(result.lottery_id)
-    );
-    const name = result.lottery_name || (prize && prize.lottery_name) || `奖品 ${result.lottery_id}`;
-    prizes.set(name, (prizes.get(name) || 0) + 1);
-    if (drawn < budget) await wait(1000);
+      const result = await growth.drawLottery();
+      if (!result || result.lottery_id === undefined) throw new Error("抽奖结果返回格式异常，请到掘金确认");
+      drawn++;
+      const prize = (Array.isArray(config.lottery) ? config.lottery : []).find(
+        item => String(item.lottery_id) === String(result.lottery_id)
+      );
+      const name = result.lottery_name || (prize && prize.lottery_name) || `奖品 ${result.lottery_id}`;
+      prizes.set(name, (prizes.get(name) || 0) + 1);
+      if (drawn < budget) await wait(1000);
+    }
+  } catch (error) {
+    const completed = drawn
+      ? `已确认 ${drawn} 次免费抽奖（${[...prizes].map(([name, count]) => `${name} ×${count}`).join("，")}）；`
+      : "";
+    throw new Error(`${completed}${utils.errorMessage(error)}`);
   }
 
   if (!drawn) return { status: "skipped", detail: "今日暂无免费次数" };
@@ -61,7 +70,10 @@ async function lucky({ growth }) {
 
 const dailyTasks = [
   { name: "每日签到", run: checkIn },
+  { name: "签到活动", run: checkInActivity },
   { name: "免费抽奖", run: freeLottery },
+  { name: "阅读成长任务", run: reading },
+  { name: "掘友成长", run: growthProgress },
   { name: "签到统计", run: counts },
   { name: "矿石余额", run: balance },
   { name: "幸运值", run: lucky }
@@ -85,7 +97,13 @@ async function runAccount(cookie, index, options = {}) {
       return account;
     }
 
-    const context = { growth: helper.growth(), helper, wait: options.wait || utils.wait, config: options.config || {} };
+    const context = {
+      growth: helper.growth(),
+      helper,
+      wait: options.wait || utils.wait,
+      config: options.config || {},
+      log
+    };
     for (const task of options.tasks || dailyTasks) {
       let result;
       try {

@@ -353,3 +353,69 @@ test("email escapes plain text and legacy channels retain bounded requests", asy
   assert.ok(email.html.includes("&lt;测试&gt; &amp;"));
   assert.equal(email.html.includes("用户名 <测试>"), false);
 });
+
+test("legacy channels reject documented business errors even when HTTP succeeds", async () => {
+  const cases = [
+    ["serverPush", "SERVERPUSHKEY", { code: 40001 }],
+    ["dingtalkWebhook", "DINGDING_WEBHOOK", { errcode: 310000 }],
+    ["wecomWebhook", "WEIXIN_WEBHOOK", { errcode: 40058 }],
+    ["weixinWebhook", "WEIXIN_WEBHOOK", { errcode: 40058 }],
+    ["pushplus", "PUSHPLUS_TOKEN", { code: 401 }],
+    ["barkWebhook", "BARK_WEBHOOK", { code: 400 }],
+    ["feishuWebhook", "FEISHU_WEBHOOK", { code: 9499 }],
+    ["feishuWebhook", "FEISHU_WEBHOOK", { StatusCode: 9499 }],
+    ["feishuWebhook", "FEISHU_WEBHOOK", { code: 0, StatusCode: 9499 }]
+  ];
+  for (const [method, setting, data] of cases) {
+    env[setting] = "https://example.invalid/mock-credential";
+    axios.post = axios.get = async () => ({ status: 200, data });
+    await assert.rejects(new NotificationKit()[method](MESSAGE), /接口返回失败/);
+  }
+});
+
+test("legacy successful or omitted business codes preserve the original response", async () => {
+  const cases = [
+    ["serverPush", "SERVERPUSHKEY", { code: 0 }],
+    ["dingtalkWebhook", "DINGDING_WEBHOOK", { errcode: 0 }],
+    ["wecomWebhook", "WEIXIN_WEBHOOK", { errcode: 0 }],
+    ["pushplus", "PUSHPLUS_TOKEN", { code: 200 }],
+    ["barkWebhook", "BARK_WEBHOOK", { code: 200 }],
+    ["feishuWebhook", "FEISHU_WEBHOOK", { code: 0 }],
+    ["feishuWebhook", "FEISHU_WEBHOOK", { StatusCode: 0 }],
+    ["feishuWebhook", "FEISHU_WEBHOOK", { code: 0, StatusCode: 0 }]
+  ];
+  for (const [method, setting, success] of cases) {
+    env[setting] = "https://example.invalid/mock-credential";
+    const stringCodes = Object.fromEntries(Object.entries(success).map(([key, value]) => [key, String(value)]));
+    for (const data of [success, stringCodes, {}]) {
+      const response = { status: 200, data };
+      axios.post = axios.get = async () => response;
+      assert.equal(await new NotificationKit()[method](MESSAGE), response);
+    }
+  }
+});
+
+test("a Server酱 business error is reported safely while Telegram still succeeds", async () => {
+  telegramConfig();
+  env.SERVERPUSHKEY = "mock_server_key";
+  axios.post = async url => {
+    if (url.startsWith("https://sctapi.ftqq.com/")) {
+      return {
+        status: 200,
+        data: { code: 40001, message: `Invalid key ${env.SERVERPUSHKEY}; token ${TOKEN}; URL ${url}` }
+      };
+    }
+    assert.equal(url, `https://api.telegram.org/bot${TOKEN}/sendMessage`);
+    return successfulResponse();
+  };
+  const result = await kitWithoutUpdateCheck().pushMessage(MESSAGE);
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.sent, ["Telegram"]);
+  assert.equal(result.failed.length, 1);
+  assert.equal(result.failed[0].channel, "Server酱");
+  assert.match(result.failed[0].error, /40001/);
+  const reported = JSON.stringify(result) + logs.join("\n");
+  assert.equal(reported.includes(env.SERVERPUSHKEY), false);
+  assert.equal(reported.includes(TOKEN), false);
+  assert.equal(reported.includes("sctapi.ftqq.com"), false);
+});

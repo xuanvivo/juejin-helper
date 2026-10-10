@@ -1,7 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { checkIn, freeLottery, runAccount } = require("../tasks/daily");
-const { run } = require("../checkin");
+const { run, inspect } = require("../checkin");
 const utils = require("../utils/utils");
 
 const delivered = { ok: true, sent: ["Telegram"], failed: [], skipped: [] };
@@ -87,6 +87,24 @@ test("an ambiguous failed lottery request is never automatically retried", async
     /timeout/
   );
   assert.equal(draws, 1);
+});
+
+test("lottery failures retain the prizes already confirmed in this run", async () => {
+  let draws = 0;
+  await assert.rejects(
+    freeLottery({
+      growth: {
+        getLotteryConfig: async () => ({ free_count: 2 }),
+        drawLottery: async () => {
+          if (++draws === 2) throw new Error("请求超时");
+          return { lottery_id: 7, lottery_name: "随机矿石" };
+        }
+      },
+      wait: noWait
+    }),
+    /已确认 1 次免费抽奖.*随机矿石 ×1.*请求超时/
+  );
+  assert.equal(draws, 2);
 });
 
 test("a failed task does not prevent subsequent tasks and the session is always cleared", async () => {
@@ -204,6 +222,46 @@ test("cookie inputs are trimmed, sorted and deduplicated", () => {
     utils.getUsersCookie({ COOKIE: " a ", COOKIE_10: "c", COOKIE_2: "b", COOKIE_3: "a", COOKIE_4: " " }),
     ["a", "b", "c"]
   );
+});
+
+test("inspect only reads account task status and never calls notification or action methods", async () => {
+  const calls = [];
+  const data = {
+    growth_tasks: { 3: [{ task_id: 13, title: "阅读", done: 0, limit: 5, score: 0.5 }] },
+    today_jscore: 0
+  };
+  const result = await inspect({
+    env: { COOKIE: "valid" },
+    log: () => {},
+    createHelper: () =>
+      helper({
+        growth: () => ({
+          getGrowthTasks: async () => {
+            calls.push("tasks");
+            return data;
+          },
+          getGrowthProgress: async () => {
+            calls.push("progress");
+            return { current_level: 3, current_score: 98 };
+          },
+          getCheckInActivity: async () => {
+            calls.push("activity");
+            return {};
+          },
+          getTodayStatusV2: async () => {
+            calls.push("status");
+            return { check_in_done: true, lt_task_exist: false };
+          }
+        })
+      }),
+    notification: {
+      pushMessage: async () => {
+        throw new Error("inspect must not notify");
+      }
+    }
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls, ["tasks", "progress", "activity", "status"]);
 });
 
 test("network errors never expose authentication headers or token-bearing URLs", () => {

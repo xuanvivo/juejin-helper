@@ -2,7 +2,7 @@
   "name": "workflows",
   "version": "1.9.0",
   "private": true,
-  "description": "稀土掘金助手：签到、抽奖、沾喜气、消除Bug、海底掘金游戏、自动化工作流。",
+  "description": "掘金每日任务、阅读成长任务、活动检测与 Telegram 等多渠道通知。",
   "author": "Derek Li",
   "scripts": {
     "test": "node --require ts-node/register --test test/*.test.js",
