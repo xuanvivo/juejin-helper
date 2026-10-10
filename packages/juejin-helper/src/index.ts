@@ -32,10 +32,14 @@ class JuejinHelper {
     this.user = await api.get("/user_api/v1/user/get", {
       headers: { cookie: this.getCookie() }
     });
+    if (!this.user?.user_id) {
+      throw new Error("登录失败，请更新掘金 Cookie");
+    }
   }
 
   async logout() {
     this.cookie.clear();
+    this.cookieTokens = null;
     this.user = null;
   }
 

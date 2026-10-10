@@ -11,12 +11,12 @@ class Cookie {
   setCookieValue(cookie: string = "") {
     this.stack.clear();
     this.cookie = cookie;
-    cookie
-      .split("; ")
-      .map(string => string.split("="))
-      .forEach(([key, value]) => {
-        this.stack.set(key, value);
-      });
+    cookie.split(";").forEach(part => {
+      const separator = part.indexOf("=");
+      if (separator > 0) {
+        this.stack.set(part.slice(0, separator).trim(), part.slice(separator + 1).trim());
+      }
+    });
   }
 
   get(key: string) {

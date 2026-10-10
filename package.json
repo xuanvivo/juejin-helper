@@ -1,14 +1,17 @@
 {
   "name": "juejin-helper-monorepo",
-  "version": "1.7.3",
+  "version": "1.9.0",
   "private": true,
   "author": "Derek Li",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "workflows"
   ],
   "scripts": {
     "dev": "cross-env NODE_ENV=development rollup -cw",
     "build": "cross-env NODE_ENV=production rollup -c",
+    "test": "npm run test --workspace workflows",
+    "checkin": "npm run checkin --workspace workflows",
     "clean": "rimraf \"packages/*/{build,types}\"",
     "release:version": "lerna version --exact --force-publish",
     "release:build": "npm run clean && npm run build",
@@ -35,7 +38,8 @@
     "workspaces-run": "^1.0.1"
   },
   "engines": {
-    "node": ">=14.17.0",
-    "npm": ">=6.14.13"
-  }
+    "node": ">=22",
+    "npm": ">=10"
+  },
+  "packageManager": "npm@11.19.0"
 }

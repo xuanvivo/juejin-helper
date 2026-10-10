@@ -1,4 +1,5 @@
 const env = process.env || {};
+const firstValue = (...values) => values.map(value => (typeof value === "string" ? value.trim() : "")).find(Boolean);
 
 module.exports = {
   /* 掘金Cookie */
@@ -8,6 +9,8 @@ module.exports = {
   COOKIE_3: env.COOKIE_3,
   COOKIE_4: env.COOKIE_4,
   COOKIE_5: env.COOKIE_5,
+  /* run 执行任务，inspect 只读取状态 */
+  TASK_MODE: env.TASK_MODE || "run",
   /**
    * 邮箱配置
    * user 发件人邮箱, pass, 发件人密码, to收件人
@@ -15,6 +18,13 @@ module.exports = {
   EMAIL_USER: env.EMAIL_USER,
   EMAIL_PASS: env.EMAIL_PASS,
   EMAIL_TO: env.EMAIL_TO,
+  /**
+   * Telegram Bot 配置；兼容常用的 TG_* 环境变量。
+   * 群组 ID 可以是负数；论坛话题可额外配置 message_thread_id。
+   */
+  TELEGRAM_BOT_TOKEN: firstValue(env.TELEGRAM_BOT_TOKEN, env.TG_BOT_TOKEN),
+  TELEGRAM_CHAT_ID: firstValue(env.TELEGRAM_CHAT_ID, env.TG_CHAT_ID, env.TG_USER_ID),
+  TELEGRAM_MESSAGE_THREAD_ID: firstValue(env.TELEGRAM_MESSAGE_THREAD_ID),
   /**
    * 钉钉配置
    * https://open.dingtalk.com/document/robots/custom-robot-access

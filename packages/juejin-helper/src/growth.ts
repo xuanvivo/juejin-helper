@@ -1,42 +1,27 @@
 import JuejinHelper from "./index";
-import axios, { AxiosInstance } from "axios";
+import { AxiosInstance } from "axios";
+import { createApiClient } from "./services/api";
 
 class Growth {
   http: AxiosInstance;
 
   constructor(juejin: JuejinHelper) {
-    this.http = axios.create({
-      baseURL: "https://api.juejin.cn",
-      headers: {
-        referer: "https://juejin.cn/",
-        origin: "https://juejin.cn"
-      }
-    });
+    this.http = createApiClient();
 
     this.http.interceptors.request.use(
       function (config) {
-        if (!juejin) config;
-        // @ts-ignore
-        config.headers.cookie = juejin?.getCookie();
+        config.headers = config.headers || {};
+        config.headers.cookie = juejin.getCookie();
 
-        if ((juejin as JuejinHelper).user) {
-          const tokens = (juejin as JuejinHelper).getCookieTokens();
-          // @ts-ignore
-          config.url += `${config.url.indexOf("?") === -1 ? "?" : "&"}aid=${tokens.aid}&uuid=${tokens.uuid}`;
+        if (juejin.user) {
+          const tokens = juejin.getCookieTokens();
+          config.params = {
+            ...config.params,
+            aid: tokens?.aid || "2608",
+            ...(tokens?.uuid ? { uuid: tokens.uuid } : {})
+          };
         }
         return config;
-      },
-      function (error) {
-        return Promise.reject(error);
-      }
-    );
-
-    this.http.interceptors.response.use(
-      function (response) {
-        if (response.data.err_no) {
-          throw new Error(response.data.err_msg);
-        }
-        return response.data.data;
       },
       function (error) {
         return Promise.reject(error);
@@ -129,6 +114,58 @@ class Growth {
 
   async getMyLucky() {
     return this.http.post("/growth_api/v1/lottery_lucky/my_lucky");
+  }
+
+  /** 掘友分成长任务；task_id=13 为阅读文章任务。 */
+  async getGrowthTasks() {
+    return this.http.post("/growth_api/v1/user_growth/task_list", { growth_type: 1 });
+  }
+
+  async getGrowthProgress() {
+    return this.http.post("/growth_api/v1/user_growth/progress", { growth_type: 1 });
+  }
+
+  async getCheckInActivity() {
+    return this.http.post("/user_api/v1/task/get", { lt_task_type: 1 });
+  }
+
+  async getTodayStatusV2() {
+    return this.http.get("/growth_api/v2/get_today_status");
+  }
+
+  /** Matches the site's task synchronization performed after login. */
+  async completeAvailableTasks() {
+    return this.http.post("/user_api/v1/task/complete", {});
+  }
+
+  async getRecommendedArticles() {
+    return this.http.post("/recommend_api/v1/article/recommend_all_feed", {
+      id_type: 2,
+      client_type: 2608,
+      sort_type: 300,
+      cursor: "0",
+      limit: 20
+    });
+  }
+
+  async getArticleDetail(articleId: string) {
+    return this.http.post("/content_api/v1/article/detail", {
+      article_id: articleId,
+      req_from: 1,
+      client_type: 2608,
+      forbid_count: false,
+      is_pre_load: false,
+      need_theme: true
+    });
+  }
+
+  /** Call only after the article's required 90-second reading interval. */
+  async reportArticleRead(articleId: string) {
+    return this.http.post("/growth_api/v1/user_growth/add_point_report", {
+      growth_type: 1,
+      task_id: 13,
+      item_id: articleId
+    });
   }
 }
 

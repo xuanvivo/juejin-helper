@@ -2,44 +2,67 @@ name: Auto
 
 on:
   schedule:
-    - cron: "30 22 * * *" # 北京时间上午06:30
+    - cron: "30 22 * * *" # 北京时间每天 06:30
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "run 执行任务；inspect 只检查活动与任务状态"
+        type: choice
+        options:
+          - run
+          - inspect
+        default: run
+
+permissions:
+  contents: read
+
+concurrency:
+  group: juejin-auto
+  cancel-in-progress: false
 
 env:
-  COOKIE: ${{ secrets.COOKIE }}
-  COOKIE_2: ${{ secrets.COOKIE_2 }}
-  COOKIE_3: ${{ secrets.COOKIE_3 }}
-  COOKIE_4: ${{ secrets.COOKIE_4 }}
-  COOKIE_5: ${{ secrets.COOKIE_5 }}
-  EMAIL_USER: ${{ secrets.EMAIL_USER }}
-  EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-  EMAIL_TO: ${{ secrets.EMAIL_TO }}
-  DINGDING_WEBHOOK: ${{ secrets.DINGDING_WEBHOOK }}
-  PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
-  WEIXIN_WEBHOOK: ${{ secrets.WEIXIN_WEBHOOK }}
-  SERVERPUSHKEY: ${{ secrets.SERVERPUSHKEY }}
-  FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+  PUPPETEER_SKIP_DOWNLOAD: "true"
 
 jobs:
   CheckIn:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-      - name: Run Project
-        run: |
-          cd workflows
-          yarn
-          yarn checkin
-
-#  SeaGold:
-#    needs: CheckIn
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v2
-#      - uses: actions/setup-node@v2
-#      - name: Run Project
-#        run: |
-#          cd workflows
-#          yarn
-#          yarn seagold
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build local SDK
+        run: npm run build
+      - name: Run offline tests
+        run: npm test
+      - name: Run daily tasks
+        run: npm run checkin
+        env:
+          TASK_MODE: ${{ inputs.mode || 'run' }}
+          COOKIE: ${{ secrets.COOKIE }}
+          COOKIE_2: ${{ secrets.COOKIE_2 }}
+          COOKIE_3: ${{ secrets.COOKIE_3 }}
+          COOKIE_4: ${{ secrets.COOKIE_4 }}
+          COOKIE_5: ${{ secrets.COOKIE_5 }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_MESSAGE_THREAD_ID: ${{ secrets.TELEGRAM_MESSAGE_THREAD_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_USER_ID: ${{ secrets.TG_USER_ID }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          DINGDING_WEBHOOK: ${{ secrets.DINGDING_WEBHOOK }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          WEIXIN_WEBHOOK: ${{ secrets.WEIXIN_WEBHOOK }}
+          SERVERPUSHKEY: ${{ secrets.SERVERPUSHKEY }}
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          BARK_WEBHOOK: ${{ secrets.BARK_WEBHOOK }}
