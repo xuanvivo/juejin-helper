@@ -78,7 +78,7 @@ SDK 的阅读方法只负责单次 API 调用。仓库 [每日工作流](https:/
 
 ## 互动接口
 
-`helper.interaction()` 提供点赞、收藏和关注所需的官方查询与写入接口，任务编排见 `workflows/tasks/engagement.js`。使用前必须查询现有状态，写入后重新检查状态和成长任务进度；SDK 单次请求成功不代表任务已经计分。工作流默认每项每天最多 2 次，可通过 `AUTO_LIKE_ARTICLES`、`AUTO_LIKE_PINS`、`AUTO_COLLECT_ARTICLES`、`AUTO_FOLLOW_USERS` 关闭，或通过 `FOLLOW_USER_IDS`、`COLLECTION_ID` 指定目标。
+`helper.interaction()` 提供点赞、收藏和关注所需的官方查询与写入接口，任务编排见 `workflows/tasks/engagement.js`。使用前必须查询现有状态，写入后重新检查状态和成长任务进度；SDK 单次请求成功不代表任务已经计分。工作流默认每项每次最多 2 次，可通过 `AUTO_LIKE_ARTICLES`、`AUTO_LIKE_PINS`、`AUTO_COLLECT_ARTICLES`、`AUTO_FOLLOW_USERS` 关闭，或通过 `FOLLOW_USER_IDS`、`COLLECTION_ID` 指定目标。
 
 ## 历史活动与兼容接口
 

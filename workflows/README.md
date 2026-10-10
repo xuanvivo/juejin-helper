@@ -60,8 +60,8 @@ export TELEGRAM_CHAT_ID
 | `TG_BOT_TOKEN`、`TG_CHAT_ID`、`TG_USER_ID`   | Telegram 配置别名；优先使用 `TELEGRAM_*`。                   |
 | `AUTO_READ_ARTICLES`                         | 默认 `true`；设为 `false` 关闭阅读任务。                     |
 | `READING_MAX_ARTICLES`                       | 每个账号每次最多阅读的篇数，默认 `5`，有效范围 `1` 至 `10`。 |
-| `AUTO_LIKE_ARTICLES`、`AUTO_LIKE_PINS`       | 默认 `true`；分别控制点赞文章、点赞沸点，每项每天最多 2 次。 |
-| `AUTO_COLLECT_ARTICLES`、`AUTO_FOLLOW_USERS` | 默认 `true`；分别控制收藏文章、关注作者，每项每天最多 2 次。 |
+| `AUTO_LIKE_ARTICLES`、`AUTO_LIKE_PINS`       | 默认 `true`；分别控制点赞文章、点赞沸点，每项每次最多 2 次。 |
+| `AUTO_COLLECT_ARTICLES`、`AUTO_FOLLOW_USERS` | 默认 `true`；分别控制收藏文章、关注作者，每项每次最多 2 次。 |
 | `AUTO_CLAIM_LUCKY`                           | 默认 `true`；满 6000 幸运值时每次运行最多领取一个保底奖品。  |
 | `FOLLOW_USER_IDS`                            | 可选作者 ID 名单，用逗号或空格分隔；留空使用推荐文章作者。   |
 | `COLLECTION_ID`                              | 可选本人收藏夹 ID；留空使用本人的已有默认或第一个收藏夹。    |
@@ -99,7 +99,7 @@ READING_MAX_ARTICLES=2 npm run checkin
 
 阅读任务会先查询后台上限与已完成数量，仅处理尚未完成的部分；每篇读取文章实际内容后等待 90 秒，提交后再次核对进度。若账号没有相应任务、当天已完成或功能被关闭，会记录跳过原因。签到活动的开放时间、资格和额外奖励以账号的官方返回结果为准。
 
-点赞、收藏和关注会产生真实账号操作，默认按推荐流选择候选，每项每天最多 2 次；已有操作会跳过，写入之后重新查询状态和任务次数，失败或结果不明时不自动重发。`FOLLOW_USER_IDS` 可限定作者名单，`COLLECTION_ID` 可指定本人收藏夹，脚本不创建收藏夹或改变可见范围。
+点赞、收藏和关注会产生真实账号操作，默认按推荐流选择候选，每项每次最多 2 次；已有操作会跳过，写入之后重新查询状态和任务次数，失败或结果不明时不自动重发。`FOLLOW_USER_IDS` 可限定作者名单，`COLLECTION_ID` 可指定本人收藏夹，脚本不创建收藏夹或改变可见范围。
 
 例如关闭关注，同时限定收藏夹：
 
