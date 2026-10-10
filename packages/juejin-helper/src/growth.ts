@@ -2,6 +2,21 @@ import JuejinHelper from "./index";
 import { AxiosInstance } from "axios";
 import { createApiClient } from "./services/api";
 
+// Keep the original built SDK's optional identifiers on its existing endpoints.
+// Supplying web identifiers changes the request metadata required by v1 lottery.
+const legacyIdentifierPaths = new Set([
+  "/growth_api/v1/get_counts",
+  "/growth_api/v1/get_cur_point",
+  "/growth_api/v1/get_today_status",
+  "/growth_api/v1/get_by_month",
+  "/growth_api/v1/lottery_config/get",
+  "/growth_api/v1/lottery/draw",
+  "/growth_api/v1/check_in",
+  "/growth_api/v1/lottery_history/global_big",
+  "/growth_api/v1/lottery_lucky/dip_lucky",
+  "/growth_api/v1/lottery_lucky/my_lucky"
+]);
+
 class Growth {
   http: AxiosInstance;
 
@@ -16,9 +31,10 @@ class Growth {
         if (juejin.user) {
           const tokens = juejin.getCookieTokens();
           config.params = {
-            ...config.params,
-            aid: tokens?.aid || "2608",
-            ...(tokens?.uuid ? { uuid: tokens.uuid } : {})
+            ...(legacyIdentifierPaths.has(config.url || "")
+              ? { aid: "", uuid: "" }
+              : { aid: tokens?.aid || "2608", ...(tokens?.uuid ? { uuid: tokens.uuid } : {}) }),
+            ...config.params
           };
         }
         return config;

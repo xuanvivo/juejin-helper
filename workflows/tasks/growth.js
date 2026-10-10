@@ -127,7 +127,17 @@ async function reading({ growth, wait, config = {}, log = () => {} }) {
       // Never retry an ambiguous report: the server may already have counted it.
       reportPending = true;
       await growth.reportArticleRead(id);
-      const next = taskState(await growth.getGrowthTasks());
+      let next = taskState(await growth.getGrowthTasks());
+      // Allow a bounded delay for the server's progress view to catch up.
+      // Only repeat the read; never repeat a potentially accepted report.
+      for (
+        let attempt = 0;
+        next.task && next.task.done === current.task.done && next.score >= current.score && attempt < 2;
+        attempt++
+      ) {
+        await wait(2000);
+        next = taskState(await growth.getGrowthTasks());
+      }
       if (!next.task || next.task.limit === 0 || next.task.done < current.task.done || next.score < current.score) {
         throw new Error("阅读任务进度发生变化或跨日，最近一次阅读结果未确认");
       }

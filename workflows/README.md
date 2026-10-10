@@ -14,7 +14,26 @@ npm run build
 npm test
 ```
 
-`npm ci` 根据根 `package-lock.json` 安装所有工作区；根目录和 `workflows/` 下的 `yarn.lock` 是不再维护的历史文件。当前任务无需下载或启动 Puppeteer 浏览器。
+`npm ci` 根据根 `package-lock.json` 安装所有工作区；根目录和 `workflows/` 下的 `yarn.lock` 是不再维护的历史文件。`PUPPETEER_SKIP_DOWNLOAD=true` 只跳过安装时的浏览器下载，不会关闭运行时的浏览器流程。
+
+## 浏览器配置
+
+常规任务通过 API 执行。抽奖配置 API 返回空响应时，工作流会用 Puppeteer 打开官方抽奖页面，由官网脚本处理请求；在页面中确认免费次数后，只执行免费单抽，没有免费机会时跳过。已提交抽奖后的响应异常不会触发浏览器切换或重试。
+
+GitHub 托管的 Ubuntu 运行器已预装 Chrome，因此工作流保持 `PUPPETEER_SKIP_DOWNLOAD=true`，无需在 `npm ci` 时重复下载浏览器。本地运行应准备可用的 Chrome 或 Chromium；自动定位不到浏览器时，用以下任一环境变量指定可执行文件：
+
+| 环境变量                    | 说明                                      |
+| --------------------------- | ----------------------------------------- |
+| `PUPPETEER_EXECUTABLE_PATH` | Chrome 或 Chromium 可执行文件的完整路径。 |
+| `CHROME_PATH`               | 同样可用于指定浏览器可执行文件。          |
+
+例如，已安装浏览器的 Linux 系统可以这样运行；请把路径换成本机实际位置：
+
+```bash
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome npm run checkin
+```
+
+该页面流程使用工作流专用的浏览器封装，独立于 SDK 中为历史兼容保留的 `browser()` 接口。
 
 ## 配置凭据
 
@@ -89,6 +108,7 @@ READING_MAX_ARTICLES=2 npm run checkin
 - 通知失败：检查相应配置和网络；Telegram 私聊需先向机器人发送 `/start`，群组或频道需有发送权限。
 - 阅读进度未增加：以重新查询的后台进度为准，查看任务结果，不要通过反复并发运行刷同一任务。
 - 活动未开放：该账号当前没有可处理活动时跳过，不保证每个账号都有额外奖励。
+- 本地抽奖页面流程无法启动浏览器：确认 Chrome 或 Chromium 已安装且可运行，并检查 `PUPPETEER_EXECUTABLE_PATH` 或 `CHROME_PATH` 指向实际可执行文件。
 - 本地无法找到 SDK 构建文件：确认已从根目录执行 `npm ci` 和 `npm run build`。
 
 沾喜气、BugFix 和海底掘金是已下线的旧活动。旧 `seagold.js`、相关 SDK 模块和脚本只保留历史兼容用途，当前每日工作流不会执行，不再需要旧版文档中的游戏授权步骤。

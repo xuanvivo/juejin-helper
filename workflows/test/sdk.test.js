@@ -75,3 +75,36 @@ test("article content and view tracking use the separate official request modes"
     { article_id: "12345", req_from: 1, client_type: 2608, forbid_count: false, is_pre_load: false, need_theme: true }
   ]);
 });
+
+test("existing v1 calls retain legacy identifiers while new task calls use parsed identifiers", async () => {
+  const requests = [];
+  const growth = new Growth({
+    user: {},
+    getCookie: () => "session=private",
+    getCookieTokens: () => ({ aid: "2608", uuid: "parsed-id" })
+  });
+  growth.http.defaults.adapter = async config => {
+    requests.push({ url: config.url, params: config.params });
+    return response({ err_no: 0, data: {} }, config);
+  };
+  await growth.getCounts();
+  await growth.getCurrentPoint();
+  await growth.getTodayStatus();
+  await growth.getByMonth();
+  await growth.getLotteryConfig();
+  await growth.drawLottery();
+  await growth.checkIn();
+  await growth.getLotteriesLuckyUsers();
+  await growth.dipLucky(123);
+  await growth.getMyLucky();
+  await growth.getGrowthTasks();
+  await growth.getTodayStatusV2();
+  assert.deepEqual(
+    requests.map(request => request.params),
+    [
+      ...Array.from({ length: 10 }, () => ({ aid: "", uuid: "" })),
+      { aid: "2608", uuid: "parsed-id" },
+      { aid: "2608", uuid: "parsed-id" }
+    ]
+  );
+});

@@ -325,6 +325,28 @@ test("a successful report with unchanged server progress is not treated as task 
   assert.equal(events.filter(event => event.startsWith("report:")).length, 1);
 });
 
+test("delayed server progress is rechecked without repeating the accepted report", async () => {
+  const { context, events } = fixture({ limit: 1 });
+  const tasks = context.growth.getGrowthTasks;
+  let reads = 0;
+  context.growth.getGrowthTasks = async () => {
+    const result = await tasks();
+    if (++reads === 2) {
+      result.growth_tasks["3"][0].done = 0;
+      result.today_jscore = 10;
+    }
+    return result;
+  };
+  const result = await reading(context);
+  assert.equal(result.status, "success");
+  assert.match(result.detail, /1\/1/);
+  assert.equal(events.filter(event => event.startsWith("report:")).length, 1);
+  assert.deepEqual(
+    events.filter(event => event.startsWith("wait:")),
+    ["wait:90000", "wait:2000"]
+  );
+});
+
 test("an ambiguous report failure stops without retries and retains confirmed partial progress", async () => {
   const { context, events } = fixture();
   const report = context.growth.reportArticleRead;

@@ -32,7 +32,7 @@ npm run dev
 
 ## 验证改动
 
-`npm test` 运行 `workflows/test/*.test.js`，使用 Node.js 原生测试运行器及 `ts-node/register`。测试应模拟 HTTP、SMTP、计时和账号数据，不依赖真实 Cookie，也不向外部发送通知或提交任务。
+`npm test` 运行 `workflows/test/*.test.js`，使用 Node.js 原生测试运行器及 `ts-node/register`。测试应模拟 HTTP、SMTP、浏览器交互、计时和账号数据，不依赖真实 Cookie，也不向外部发送通知或提交任务。
 
 修改通知、账号编排或 SDK 时，补充能覆盖行为的测试，特别是异常响应、接口超时、已完成任务和重复执行场景。CI 会先构建本地 SDK，再执行离线测试；不要用捕获全部异常或跳过断言的方式掩盖失败。
 
@@ -43,6 +43,8 @@ TASK_MODE=inspect npm run checkin
 ```
 
 `npm run checkin` 默认会执行真实任务并发送已配置的通知。SDK 目录下原有 `test:*` 示例也可能访问真实接口，与根 `npm test` 的离线测试用途不同。
+
+抽奖配置接口返回空响应时，工作流通过专用 Puppeteer 封装调用官方页面，由官网脚本处理请求并确认免费机会。调试该页面流程需要可用的 Chrome 或 Chromium，可设置 `PUPPETEER_EXECUTABLE_PATH` 或 `CHROME_PATH`；GitHub 托管的 Ubuntu 运行器已带 Chrome，安装依赖仍应跳过重复下载。
 
 阅读任务应遵循官方的阅读间隔，并在提交后查询后台进度。发现新活动时，先核对官方页面、接口数据及账号开放条件，再决定是否支持；已下线的旧游戏不应重新列入默认任务。
 

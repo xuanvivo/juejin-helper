@@ -107,6 +107,104 @@ test("lottery failures retain the prizes already confirmed in this run", async (
   assert.equal(draws, 2);
 });
 
+test("an empty lottery config uses the official browser client and always closes it", async () => {
+  const calls = [];
+  const result = await freeLottery({
+    growth: {
+      getLotteryConfig: async () => {
+        throw Object.assign(new Error("空响应"), { code: "INVALID_API_RESPONSE" });
+      }
+    },
+    helper: {},
+    wait: noWait,
+    createLotteryBrowser: () => ({
+      getLotteryConfig: async () => {
+        calls.push("config");
+        return { free_count: 1 };
+      },
+      drawLottery: async () => {
+        calls.push("draw");
+        return { lottery_id: 7, lottery_name: "矿石" };
+      },
+      close: async () => {
+        calls.push("close");
+      }
+    })
+  });
+  assert.match(result, /免费机会.*矿石/);
+  assert.deepEqual(calls, ["config", "draw", "close"]);
+});
+
+test("browser fallback with no free chances never draws and releases resources", async () => {
+  let closed = false;
+  const result = await freeLottery({
+    growth: {
+      getLotteryConfig: async () => {
+        throw Object.assign(new Error("空响应"), { code: "INVALID_API_RESPONSE" });
+      }
+    },
+    helper: {},
+    wait: noWait,
+    createLotteryBrowser: () => ({
+      getLotteryConfig: async () => ({ free_count: 0 }),
+      close: async () => {
+        closed = true;
+      }
+    })
+  });
+  assert.equal(result.status, "skipped");
+  assert.equal(closed, true);
+});
+
+test("an ambiguous submitted draw never switches to a second client or retries", async () => {
+  let created = 0;
+  let attempts = 0;
+  await assert.rejects(
+    freeLottery({
+      growth: {
+        getLotteryConfig: async () => ({ free_count: 1 }),
+        drawLottery: async () => {
+          attempts++;
+          throw Object.assign(new Error("抽奖结果未确认"), { code: "INVALID_API_RESPONSE" });
+        }
+      },
+      helper: {},
+      wait: noWait,
+      createLotteryBrowser: () => {
+        created++;
+        throw new Error("不得切换重试");
+      }
+    }),
+    /结果未确认/
+  );
+  assert.equal(created, 0);
+  assert.equal(attempts, 1);
+});
+
+test("free chances consumed before the browser click are treated as exhausted", async () => {
+  let closed = false;
+  const result = await freeLottery({
+    growth: {
+      getLotteryConfig: async () => {
+        throw Object.assign(new Error("空响应"), { code: "INVALID_API_RESPONSE" });
+      }
+    },
+    helper: {},
+    wait: noWait,
+    createLotteryBrowser: () => ({
+      getLotteryConfig: async () => ({ free_count: 1 }),
+      drawLottery: async () => {
+        throw Object.assign(new Error("已无免费机会"), { code: "NO_FREE_LOTTERY" });
+      },
+      close: async () => {
+        closed = true;
+      }
+    })
+  });
+  assert.equal(result.status, "skipped");
+  assert.equal(closed, true);
+});
+
 test("a failed task does not prevent subsequent tasks and the session is always cleared", async () => {
   let loggedOut = false;
   const account = await runAccount("test-cookie", 0, {
@@ -233,7 +331,6 @@ test("inspect only reads account task status and never calls notification or act
   const result = await inspect({
     env: { COOKIE: "valid" },
     log: () => {},
-    inspectHttp: async () => {},
     createHelper: () =>
       helper({
         growth: () => ({

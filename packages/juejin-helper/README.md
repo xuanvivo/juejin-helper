@@ -79,7 +79,9 @@ SDK 的阅读方法只负责单次 API 调用。仓库 [每日工作流](https:/
 
 沾喜气、BugFix、海底掘金是已下线的旧活动。`dipLucky()`、`bugfix()`、`seagold()` 等旧接口仅为历史兼容保留，当前工作流不会执行，也不再提供游戏授权指引。
 
-`browser()` 与旧埋点 `sdk()` 接口仍保留供已有调用方使用，当前每日任务无需这些接口。安装时设置 `PUPPETEER_SKIP_DOWNLOAD=true` 会跳过浏览器下载；如果自定义脚本确实需要浏览器，应自行准备适配的浏览器环境。
+`browser()` 与旧埋点 `sdk()` 接口仍保留供已有调用方使用。每日工作流在抽奖配置 API 返回空响应时，使用专用的 Puppeteer 封装打开官方页面，由官网脚本处理请求，并在确认免费机会后执行免费单抽；该封装独立于 SDK 的旧 `browser()` 接口。
+
+GitHub 托管的 Ubuntu 运行器已带 Chrome，安装依赖时保持 `PUPPETEER_SKIP_DOWNLOAD=true`，避免重复下载浏览器。本地如需使用抽奖页面流程，应准备 Chrome 或 Chromium，并可通过 `PUPPETEER_EXECUTABLE_PATH` 或 `CHROME_PATH` 指定可执行文件，配置方法见 [工作流说明](https://github.com/xuanvivo/juejin-helper/blob/main/workflows/README.md#浏览器配置)。
 
 ## 开发与许可
 

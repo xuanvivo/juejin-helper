@@ -12,22 +12,43 @@ async function checkIn({ growth }) {
   return `签到成功，+${result.incr_point} 矿石`;
 }
 
-async function freeLottery({ growth, wait }) {
+async function freeLottery({ growth, helper, wait, createLotteryBrowser, log = () => {} }) {
   const prizes = new Map();
   let drawn = 0;
   let budget;
+  let client = growth;
+  let browser;
+
+  const getConfig = async () => {
+    try {
+      return await client.getLotteryConfig();
+    } catch (error) {
+      if (client !== growth || error.code !== "INVALID_API_RESPONSE" || !helper) throw error;
+      log("抽奖配置需要官网页面处理，正在打开抽奖页");
+      const create = createLotteryBrowser || require("../utils/lottery-browser").createLotteryBrowser;
+      browser = create(helper);
+      client = browser;
+      return client.getLotteryConfig();
+    }
+  };
 
   try {
     // Do not retry a draw on network failure: it may already have consumed the free attempt.
     while (drawn < 10 && (budget === undefined || drawn < budget)) {
-      const config = await growth.getLotteryConfig();
+      const config = await getConfig();
       if (!config || !Number.isSafeInteger(config.free_count) || config.free_count < 0) {
         throw new Error("免费抽奖次数返回格式异常，已停止抽奖");
       }
       if (budget === undefined) budget = Math.min(config.free_count, 10);
       if (config.free_count === 0 || drawn >= budget) break;
 
-      const result = await growth.drawLottery();
+      let result;
+      try {
+        result = await client.drawLottery();
+      } catch (error) {
+        if (error.code === "NO_FREE_LOTTERY") break;
+        throw error;
+      }
       if (!result || result.lottery_id === undefined) throw new Error("抽奖结果返回格式异常，请到掘金确认");
       drawn++;
       const prize = (Array.isArray(config.lottery) ? config.lottery : []).find(
@@ -42,6 +63,8 @@ async function freeLottery({ growth, wait }) {
       ? `已确认 ${drawn} 次免费抽奖（${[...prizes].map(([name, count]) => `${name} ×${count}`).join("，")}）；`
       : "";
     throw new Error(`${completed}${utils.errorMessage(error)}`);
+  } finally {
+    if (browser) await browser.close();
   }
 
   if (!drawn) return { status: "skipped", detail: "今日暂无免费次数" };
