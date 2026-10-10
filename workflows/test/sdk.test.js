@@ -52,3 +52,26 @@ test("growth client carries auth only in headers and uses the official reading p
   assert.deepEqual(JSON.parse(request.data), { growth_type: 1, task_id: 13, item_id: "12345" });
   assert.doesNotMatch(request.url, /private/);
 });
+
+test("article content and view tracking use the separate official request modes", async () => {
+  const requests = [];
+  const growth = new Growth({ user: {}, getCookie: () => "session=private", getCookieTokens: () => null });
+  growth.http.defaults.adapter = async config => {
+    requests.push(JSON.parse(config.data));
+    return response({ err_no: 0, data: {} }, config);
+  };
+  await growth.getArticleDetail("12345");
+  await growth.recordArticleVisit("12345");
+  assert.deepEqual(requests, [
+    {
+      article_id: "12345",
+      req_from: 0,
+      client_type: 2608,
+      forbid_count: true,
+      is_pre_load: true,
+      need_theme: true,
+      prefer_html: true
+    },
+    { article_id: "12345", req_from: 1, client_type: 2608, forbid_count: false, is_pre_load: false, need_theme: true }
+  ]);
+});

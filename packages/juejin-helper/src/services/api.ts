@@ -14,7 +14,9 @@ export function createApiClient() {
   instance.interceptors.response.use(response => {
     const body = response.data;
     if (!body || typeof body !== "object" || typeof body.err_no !== "number") {
-      throw new Error("掘金接口返回格式异常，请检查网络或登录状态");
+      const error = new Error("掘金接口返回格式异常，请检查网络或登录状态");
+      Object.assign(error, { code: "INVALID_API_RESPONSE" });
+      throw error;
     }
     if (body.err_no !== 0) {
       const error = new Error(body.err_msg || `掘金接口错误 (${body.err_no})`);

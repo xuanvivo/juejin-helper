@@ -24,6 +24,9 @@ function fixture({ limit = 3, done = 0, score = 10, config = {}, candidates = id
       events.push(`detail:${id}`);
       return { article_id: id, article_info: { mark_content: "实际文章正文" } };
     },
+    recordArticleVisit: async id => {
+      events.push(`visit:${id}`);
+    },
     reportArticleRead: async id => {
       events.push(`report:${id}`);
       state.done++;
@@ -49,10 +52,12 @@ test("reads a real article and waits 90 seconds before each report and progress 
     "tasks",
     "recommend",
     `detail:${ids[0]}`,
+    `visit:${ids[0]}`,
     "wait:90000",
     `report:${ids[0]}`,
     "tasks",
     `detail:${ids[1]}`,
+    `visit:${ids[1]}`,
     "wait:90000",
     `report:${ids[1]}`,
     "tasks"
@@ -230,9 +235,61 @@ test("accepts the official alternative content fields without requiring markdown
   }
 });
 
-test("missing body or mismatched article identity cannot generate a completion report", async () => {
+test("skips genuine empty bodies and continues through candidates until the reading budget is met", async () => {
+  const { context, events } = fixture({ candidates: ids.slice(0, 8).map(candidate) });
+  const detail = context.growth.getArticleDetail;
+  context.growth.getArticleDetail = async id => {
+    if (ids.slice(0, 2).includes(id)) {
+      events.push(`detail:${id}`);
+      return { article_id: id, article_info: { mark_content: " ", web_html_content: null, content: "" } };
+    }
+    return detail(id);
+  };
+  const result = await reading(context);
+  assert.equal(result.status, "success");
+  assert.match(result.detail, /已确认阅读 3 篇.*3\/3.*今日阅读任务已完成.*跳过 2 篇/);
+  assert.equal(events.filter(event => event.startsWith("detail:")).length, 5);
+  assert.deepEqual(
+    events.filter(event => event.startsWith("visit:")),
+    ids.slice(2, 5).map(id => `visit:${id}`)
+  );
+  assert.deepEqual(
+    events.filter(event => event.startsWith("report:")),
+    ids.slice(2, 5).map(id => `report:${id}`)
+  );
+});
+
+test("all empty bodies fail explicitly after at most twenty candidates without recording visits", async () => {
+  const candidates = Array.from({ length: 25 }, (_, index) => candidate(String(7000000000000000000n + BigInt(index))));
+  const { context, events } = fixture({ candidates });
+  context.growth.getArticleDetail = async id => {
+    events.push(`detail:${id}`);
+    return { article_id: id, article_info: { mark_content: "", web_html_content: null, app_html_content: "" } };
+  };
+  const result = await reading(context);
+  assert.equal(result.status, "failed");
+  assert.match(result.detail, /均无有效正文.*未上报.*已确认阅读 0 篇/);
+  assert.equal(events.filter(event => event.startsWith("detail:")).length, 20);
+  assert.ok(!events.some(event => /^(visit|wait|report):/.test(event)));
+});
+
+test("running out of readable candidates preserves verified partial progress", async () => {
+  const { context, events } = fixture({ candidates: ids.slice(0, 2).map(candidate) });
+  const detail = context.growth.getArticleDetail;
+  context.growth.getArticleDetail = async id => {
+    if (id === ids[1]) return { article_id: id, article_info: { mark_content: "", web_html_content: null } };
+    return detail(id);
+  };
+  const result = await reading(context);
+  assert.equal(result.status, "success");
+  assert.match(result.detail, /已确认阅读 1 篇.*1\/3.*掘友分变化 \+2.*可用推荐文章不足.*还需 2 篇.*跳过 1 篇/);
+  assert.equal(events.filter(event => event.startsWith("report:")).length, 1);
+});
+
+test("unknown body shapes or mismatched article identity cannot generate a visit or completion report", async () => {
   for (const detail of [
-    { article_id: ids[0], article_info: { mark_content: " ", web_html_content: null } },
+    { article_id: ids[0], article_info: {} },
+    { article_id: ids[0], article_info: { mark_content: { text: "未知格式" } } },
     { article_id: ids[1], article_info: { mark_content: "其他文章正文" } },
     { article_info: { mark_content: "没有文章 ID 的响应" } },
     { article_id: ids[0] }
@@ -240,8 +297,21 @@ test("missing body or mismatched article identity cannot generate a completion r
     const { context, events } = fixture();
     context.growth.getArticleDetail = async () => detail;
     assert.equal((await reading(context)).status, "failed");
-    assert.ok(!events.some(event => event.startsWith("report:") || event.startsWith("wait:")));
+    assert.ok(!events.some(event => /^(visit|wait|report):/.test(event)));
   }
+});
+
+test("a failed visit synchronization stops before the reading wait and report", async () => {
+  const { context, events } = fixture();
+  context.growth.recordArticleVisit = async id => {
+    events.push(`visit:${id}`);
+    throw new Error("访问同步失败");
+  };
+  const result = await reading(context);
+  assert.equal(result.status, "failed");
+  assert.match(result.detail, /访问同步失败.*已确认阅读 0 篇.*0\/3/);
+  assert.deepEqual(events, ["tasks", "recommend", `detail:${ids[0]}`, `visit:${ids[0]}`]);
+  assert.doesNotMatch(result.detail, /上报结果未确认/);
 });
 
 test("a successful report with unchanged server progress is not treated as task completion", async () => {

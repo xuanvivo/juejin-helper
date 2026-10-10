@@ -55,10 +55,14 @@ function validateArticle(result, id) {
   if (!returnedIds.length || returnedIds.some(value => articleId(value) !== id)) {
     throw new Error("文章详情与请求的文章不一致，已停止阅读");
   }
-  const hasContent = [info.mark_content, info.web_html_content, info.app_html_content, info.content].some(
-    content => typeof content === "string" && content.trim().length > 0
-  );
-  if (!hasContent) throw new Error("文章没有有效正文，未上报阅读完成");
+  const fields = ["mark_content", "web_html_content", "app_html_content", "content"];
+  if (!fields.some(field => Object.prototype.hasOwnProperty.call(info, field))) {
+    throw new Error("文章正文返回格式异常");
+  }
+  if (fields.some(field => info[field] !== undefined && info[field] !== null && typeof info[field] !== "string")) {
+    throw new Error("文章正文返回格式异常");
+  }
+  return fields.some(field => typeof info[field] === "string" && info[field].trim().length > 0);
 }
 
 function readingConfig(config) {
@@ -86,6 +90,7 @@ async function reading({ growth, wait, config = {}, log = () => {} }) {
   let initial;
   let current;
   let confirmed = 0;
+  let emptyArticles = 0;
   let reportPending = false;
   const progress = () =>
     current && current.task
@@ -105,12 +110,17 @@ async function reading({ growth, wait, config = {}, log = () => {} }) {
     }
 
     const budget = Math.min(settings.maximum, current.task.limit - current.task.done);
-    const candidates = articleCandidates(await growth.getRecommendedArticles()).slice(0, budget);
+    const candidates = articleCandidates(await growth.getRecommendedArticles());
     if (!candidates.length) return { status: "skipped", detail: `暂无有效推荐文章；${progress()}` };
 
     for (const id of candidates) {
-      if (current.task.done >= current.task.limit) break;
-      validateArticle(await growth.getArticleDetail(id), id);
+      if (confirmed >= budget || current.task.done >= current.task.limit) break;
+      if (!validateArticle(await growth.getArticleDetail(id), id)) {
+        emptyArticles++;
+        log(`文章 ${id} 没有有效正文，已跳过`);
+        continue;
+      }
+      await growth.recordArticleVisit(id);
       log(`阅读文章 ${id}，停留 90 秒后核对任务进度`);
       await wait(READING_INTERVAL_MS);
 
@@ -128,6 +138,7 @@ async function reading({ growth, wait, config = {}, log = () => {} }) {
       reportPending = false;
     }
 
+    if (!confirmed) return { status: "failed", detail: `候选文章均无有效正文，未上报阅读完成；${progress()}` };
     const remaining = Math.max(0, current.task.limit - current.task.done);
     const ending =
       remaining === 0
@@ -135,7 +146,8 @@ async function reading({ growth, wait, config = {}, log = () => {} }) {
         : confirmed >= budget
         ? `达到本次 ${budget} 篇上限，今日还需 ${remaining} 篇`
         : `可用推荐文章不足，今日还需 ${remaining} 篇`;
-    return { status: "success", detail: `${progress()}；${ending}` };
+    const skipped = emptyArticles ? `；跳过 ${emptyArticles} 篇无正文文章` : "";
+    return { status: "success", detail: `${progress()}；${ending}${skipped}` };
   } catch (error) {
     const uncertainty = reportPending ? "；最近一次上报结果未确认，请查看掘金任务页" : "";
     return { status: "failed", detail: `${errorMessage(error)}；${progress()}${uncertainty}` };

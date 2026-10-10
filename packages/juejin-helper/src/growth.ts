@@ -149,6 +149,20 @@ class Growth {
   }
 
   async getArticleDetail(articleId: string) {
+    // The site's server-rendered article request contains the actual body.
+    // req_from=1 is a later metadata/view-count refresh and omits the body.
+    return this.http.post("/content_api/v1/article/detail", {
+      article_id: articleId,
+      req_from: 0,
+      client_type: 2608,
+      forbid_count: true,
+      is_pre_load: true,
+      need_theme: true,
+      prefer_html: true
+    });
+  }
+
+  async recordArticleVisit(articleId: string) {
     return this.http.post("/content_api/v1/article/detail", {
       article_id: articleId,
       req_from: 1,

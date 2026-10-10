@@ -233,6 +233,7 @@ test("inspect only reads account task status and never calls notification or act
   const result = await inspect({
     env: { COOKIE: "valid" },
     log: () => {},
+    inspectHttp: async () => {},
     createHelper: () =>
       helper({
         growth: () => ({

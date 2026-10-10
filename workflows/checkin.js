@@ -59,6 +59,7 @@ async function inspect(options = {}) {
           log(`${name} 检查失败：${utils.errorMessage(error)}`);
         }
       }
+      await (options.inspectHttp || require("./utils/inspect-http").inspectHttp)(helper, log);
     } catch (error) {
       ok = false;
       log(`账号 ${index + 1} 检查失败：${utils.errorMessage(error)}`);

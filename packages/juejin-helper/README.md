@@ -56,22 +56,24 @@ main().catch(() => {
 
 通过 `helper.growth()` 获取成长任务接口。API 客户端会检查官方响应中的 `err_no`；登录验证页、异常响应和业务错误会作为失败处理。
 
-| 方法                                                      | 用途与调用约束                                                                                                      |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `getTodayStatus()`、`checkIn()`                           | 查询今日签到状态、执行签到。先查状态，避免重复提交。                                                                |
-| `getLotteryConfig()`、`drawLottery()`                     | 查询抽奖配置、提交真实抽奖请求。使用前应检查 `free_count`，每次抽奖前重新确认；不要自动重试结果不明确的抽奖请求。   |
-| `getCounts()`、`getCurrentPoint()`、`getMyLucky()`        | 查询签到统计、矿石余额和幸运值。                                                                                    |
-| `getGrowthTasks()`、`getGrowthProgress()`                 | 读取掘友分任务及进度，用于判断任务上限、已完成数量和提交后的进展。                                                  |
-| `getRecommendedArticles()`、`getArticleDetail(articleId)` | 获取推荐文章和实际文章内容。                                                                                        |
-| `reportArticleRead(articleId)`                            | 提交 `growth_type: 1`、`task_id: 13` 的阅读记录。仅应在获取内容并完成至少 90 秒的阅读间隔后调用，随后重新核对进度。 |
-| `getCheckInActivity()`、`getTodayStatusV2()`              | 查询账号的签到活动及新版签到状态。                                                                                  |
-| `completeAvailableTasks()`                                | 按官方页面的流程同步当前可完成任务；是否生效及奖励情况取决于账号活动状态。                                          |
+| 方法                                               | 用途与调用约束                                                                                                    |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `getTodayStatus()`、`checkIn()`                    | 查询今日签到状态、执行签到。先查状态，避免重复提交。                                                              |
+| `getLotteryConfig()`、`drawLottery()`              | 查询抽奖配置、提交真实抽奖请求。使用前应检查 `free_count`，每次抽奖前重新确认；不要自动重试结果不明确的抽奖请求。 |
+| `getCounts()`、`getCurrentPoint()`、`getMyLucky()` | 查询签到统计、矿石余额和幸运值。                                                                                  |
+| `getGrowthTasks()`、`getGrowthProgress()`          | 读取掘友分任务及进度，用于判断任务上限、已完成数量和提交后的进展。                                                |
+| `getRecommendedArticles()`                         | 获取推荐文章。                                                                                                    |
+| `getArticleDetail(articleId)`                      | 使用官方服务端渲染阶段的请求参数（`req_from: 0`、`is_pre_load: true`）获取实际正文。                              |
+| `recordArticleVisit(articleId)`                    | 正文读取成功后，使用客户端阶段的请求参数（`req_from: 1`、`is_pre_load: false`）记录文章访问。                     |
+| `reportArticleRead(articleId)`                     | 提交 `growth_type: 1`、`task_id: 13` 的阅读记录。先获取正文、记录访问，再等待至少 90 秒后调用，随后重新核对进度。 |
+| `getCheckInActivity()`、`getTodayStatusV2()`       | 查询账号的签到活动及新版签到状态。                                                                                |
+| `completeAvailableTasks()`                         | 按官方页面的流程同步当前可完成任务；是否生效及奖励情况取决于账号活动状态。                                        |
 
 签到活动查询使用官方 `/user_api/v1/task/get` 的 `lt_task_type: 1`，同步接口为 `/user_api/v1/task/complete`。这些接口不保证所有账号都有活动，也不能只根据同步请求成功就认定获得奖励。
 
-SDK 的阅读方法只负责单次 API 调用。仓库 [每日工作流](https://github.com/xuanvivo/juejin-helper/tree/main/workflows) 负责等待 90 秒、按剩余任务控制篇数、跳过已完成任务、核验进度及发送通知；默认每账号每次最多 5 篇，可通过 `READING_MAX_ARTICLES` 设置为 `1` 至 `10`，或用 `AUTO_READ_ARTICLES=false` 关闭。
+SDK 的阅读方法只负责单次 API 调用。仓库 [每日工作流](https://github.com/xuanvivo/juejin-helper/tree/main/workflows) 先获取真实正文，再记录文章访问，随后等待 90 秒并上报、核验进度；同时按剩余任务控制篇数，跳过已完成任务并发送通知。默认每账号每次最多 5 篇，可通过 `READING_MAX_ARTICLES` 设置为 `1` 至 `10`，或用 `AUTO_READ_ARTICLES=false` 关闭。
 
-阅读间隔依据 [掘金官方阅读页面脚本](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/ba68fbb.js)：停留时间达到 `90000` 毫秒后才提交阅读记录；相关接口与任务枚举见 [官方公共模块](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/739e8f7.js)。任务同步调用见 [官方页面布局脚本](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/3d600ad.js)，其用途是同步已满足条件的任务，不能据此推断获得了额外奖励。
+正文获取与访问记录的两阶段参数见 [官方文章页面脚本](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/27c3bf4.js)。阅读间隔依据 [官方阅读计时脚本](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/ba68fbb.js)：停留时间达到 `90000` 毫秒后才提交阅读记录；相关接口与任务枚举见 [官方公共模块](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/739e8f7.js)。任务同步调用见 [官方页面布局脚本](https://lf-web-assets.juejin.cn/obj/juejin-web/xitu_juejin_web/3d600ad.js)，其用途是同步已满足条件的任务，不能据此推断获得了额外奖励。
 
 ## 历史接口
 
