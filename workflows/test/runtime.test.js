@@ -44,6 +44,7 @@ test("the compiled runtime loads notifications and runs an account without a Typ
   const pkg = JSON.parse(fs.readFileSync(path.join(destination, "package.json")));
   assert.equal(pkg.dependencies.typescript, undefined);
   assert.equal(pkg.devDependencies, undefined);
+  assert.ok(fs.existsSync(path.join(destination, "workflows/resources/logo.svg")));
 });
 
 test("the QingLong launcher skips a completed Beijing day before accessing account APIs", t => {

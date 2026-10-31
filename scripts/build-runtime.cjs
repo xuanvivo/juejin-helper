@@ -16,6 +16,9 @@ function buildRuntime(destination = path.join(root, "runtime")) {
 
   copy("workflows/checkin.js");
   copy("workflows/package.json");
+  copy("workflows/resources/logo.svg");
+  copy("LICENSE");
+  copy("packages/juejin-helper/LICENSE");
   for (const directory of ["workflows/tasks", "workflows/utils"]) {
     for (const filename of fs.readdirSync(path.join(root, directory))) {
       const relative = `${directory}/${filename}`;
