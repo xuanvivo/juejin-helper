@@ -12,6 +12,7 @@
   "dependencies": {
     "axios": "^0.34.0",
     "fast-astar": "^1.0.6",
+    "https-proxy-agent": "^7.0.6",
     "juejin-helper": "1.10.0",
     "nodemailer": "^10.0.16",
     "typescript": "^4.7.4"

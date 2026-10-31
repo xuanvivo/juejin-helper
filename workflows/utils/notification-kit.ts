@@ -1,6 +1,7 @@
 import path from "path";
 import nodemailer from "nodemailer";
 import axios from "axios";
+import { HttpsProxyAgent } from "https-proxy-agent";
 import env from "./env";
 import pkg from "../package.json";
 
@@ -57,6 +58,7 @@ function safeErrorMessage(error: any): string {
   let message = typeof error?.message === "string" ? error.message : "未知错误。";
   const secrets = [
     env.TELEGRAM_BOT_TOKEN,
+    env.TELEGRAM_PROXY_URL,
     env.EMAIL_PASS,
     env.PUSHPLUS_TOKEN,
     env.SERVERPUSHKEY,
@@ -223,6 +225,18 @@ export class NotificationKit {
       throw new Error("TELEGRAM_MESSAGE_THREAD_ID 必须是正整数。");
     }
 
+    let proxyOptions = {};
+    if (env.TELEGRAM_PROXY_URL) {
+      let proxyUrl: URL;
+      try {
+        proxyUrl = new URL(env.TELEGRAM_PROXY_URL);
+        if (!["http:", "https:"].includes(proxyUrl.protocol)) throw new Error("unsupported protocol");
+      } catch {
+        throw new Error("TELEGRAM_PROXY_URL 必须是有效的 HTTP 或 HTTPS 代理地址。");
+      }
+      proxyOptions = { httpsAgent: new HttpsProxyAgent(proxyUrl), proxy: false };
+    }
+
     const message = `${options.title}\n${options.content}`;
     if (!message.trim()) throw new Error("Telegram 通知内容不能为空。");
     const chunks = splitTelegramMessage(message);
@@ -242,7 +256,8 @@ export class NotificationKit {
             {
               timeout: REQUEST_TIMEOUT,
               maxRedirects: 0,
-              validateStatus: () => true
+              validateStatus: () => true,
+              ...proxyOptions
             }
           );
         } catch (error) {

@@ -145,6 +145,40 @@ test("long Telegram messages preserve Unicode and complete emoji at chunk bounda
   }
 });
 
+test("Telegram uses an explicit CONNECT agent when a proxy is configured", async () => {
+  telegramConfig();
+  env.TELEGRAM_PROXY_URL = "http://proxy-user:proxy-password@127.0.0.1:8080";
+  let requests = 0;
+  axios.post = async (_url, _payload, config) => {
+    requests++;
+    assert.equal(config.proxy, false);
+    assert.equal(config.httpsAgent.proxy.hostname, "127.0.0.1");
+    assert.equal(config.httpsAgent.proxy.port, "8080");
+    return successfulResponse();
+  };
+  await new NotificationKit().telegram(MESSAGE);
+  assert.equal(requests, 1);
+});
+
+test("invalid Telegram proxy URLs fail before sending without exposing proxy credentials", async () => {
+  telegramConfig();
+  let requests = 0;
+  axios.post = async () => {
+    requests++;
+    return successfulResponse();
+  };
+  for (const proxy of ["not-a-url", "socks5://secret-user:secret-password@127.0.0.1:1080"]) {
+    env.TELEGRAM_PROXY_URL = proxy;
+    await assert.rejects(new NotificationKit().telegram(MESSAGE), error => {
+      assert.match(error.message, /TELEGRAM_PROXY_URL/);
+      assert.equal(error.message.includes("secret-password"), false);
+      assert.equal(error.message.includes(proxy), false);
+      return true;
+    });
+  }
+  assert.equal(requests, 0);
+});
+
 test("incomplete Telegram settings report a failure without blocking another channel", async () => {
   env.TELEGRAM_BOT_TOKEN = TOKEN;
   env.DINGDING_WEBHOOK = "https://example.invalid/dingtalk";

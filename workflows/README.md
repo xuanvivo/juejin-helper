@@ -59,6 +59,7 @@ export TELEGRAM_CHAT_ID
 | `COOKIE`、`COOKIE_2` 至 `COOKIE_5`           | 各账号的完整掘金登录 Cookie。                                |
 | `TELEGRAM_BOT_TOKEN`、`TELEGRAM_CHAT_ID`     | Telegram 通知的两个必填配置，支持私聊、群组和频道。          |
 | `TELEGRAM_MESSAGE_THREAD_ID`                 | 可选的群组话题 ID，正整数。                                  |
+| `TELEGRAM_PROXY_URL`                         | 可选的 Telegram 专用 HTTP/HTTPS 代理地址。                   |
 | `TG_BOT_TOKEN`、`TG_CHAT_ID`、`TG_USER_ID`   | Telegram 配置别名；优先使用 `TELEGRAM_*`。                   |
 | `AUTO_READ_ARTICLES`                         | 默认 `true`；设为 `false` 关闭阅读任务。                     |
 | `READING_MAX_ARTICLES`                       | 每个账号每次最多阅读的篇数，默认 `5`，有效范围 `1` 至 `10`。 |

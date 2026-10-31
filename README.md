@@ -42,6 +42,7 @@ App 登录、头像/昵称/手机设置以及发文、发沸点、评论需要�
 | `TELEGRAM_BOT_TOKEN`                           | Telegram 机器人 Token，与 `TELEGRAM_CHAT_ID` 一起配置。 |
 | `TELEGRAM_CHAT_ID`                             | 接收通知的私聊、群组或频道 ID；群组 ID 可以是负数。     |
 | `TELEGRAM_MESSAGE_THREAD_ID`                   | 可选，群组论坛话题 ID，填写正整数。                     |
+| `TELEGRAM_PROXY_URL`                           | 可选，Telegram 专用 HTTP/HTTPS 代理地址。              |
 
 Telegram 机器人可通过 [BotFather](https://t.me/BotFather) 创建。私聊接收通知前，先向机器人发送 `/start`；群组或频道接收通知时，先加入机器人并授予发送消息的权限。Token 和 Chat ID 都配置后，`run` 模式会推送任务汇总。
 
@@ -113,7 +114,7 @@ Telegram 机器人可通过 [BotFather](https://t.me/BotFather) 创建。私聊�
 
 可以在构建机器执行 `npm ci`、`npm run build:runtime`，得到 `runtime/` 目录。在该目录执行 `PUPPETEER_SKIP_DOWNLOAD=true npm install --omit=dev --ignore-scripts` 安装运行依赖后，将整个目录（包含本地 SDK 和依赖）部署到服务器。日常只运行 `bash qinglong.sh`，无需安装 TypeScript 或每天重新构建。
 
-青龙环境变量使用 `JUEJIN_` 前缀，例如 `JUEJIN_COOKIE`、`JUEJIN_COOKIE_2`、`JUEJIN_TELEGRAM_BOT_TOKEN`、`JUEJIN_TELEGRAM_CHAT_ID` 和 `JUEJIN_AUTO_READ_ARTICLES`。启动器只将该任务的设置传给脚本，避免与面板其他任务的 Cookie 或通知配置混用。用 `JUEJIN_STATE_DIR` 指定持久化状态目录；启动器使用 `flock` 防止并发，按北京时间记录当天成功结果，重复调度会跳过。
+青龙环境变量使用 `JUEJIN_` 前缀，例如 `JUEJIN_COOKIE`、`JUEJIN_COOKIE_2`、`JUEJIN_TELEGRAM_BOT_TOKEN`、`JUEJIN_TELEGRAM_CHAT_ID` 和 `JUEJIN_AUTO_READ_ARTICLES`。Telegram 需要代理时设置 `JUEJIN_TELEGRAM_PROXY_URL`，例如 `http://127.0.0.1:8080`。启动器只将该任务的设置传给脚本，避免与面板其他任务的 Cookie 或通知配置混用。用 `JUEJIN_STATE_DIR` 指定持久化状态目录；启动器使用 `flock` 防止并发，按北京时间记录当天成功结果，重复调度会跳过。
 
 执行 `bash qinglong.sh inspect` 只检查状态；`bash qinglong.sh force` 可在当天成功后明确重新执行。安装目录和状态目录应放在青龙持久化的 `/ql/data` 中。建议每天主调度一次，按需增加备用时间；迁移完成后停用 GitHub 的 `Auto`，避免两处独立运行。浏览器兜底仍需目标机器提供 Chrome/Chromium，配置方法见下方说明。
 

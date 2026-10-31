@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-runtime_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+runtime_dir="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 state_dir="${JUEJIN_STATE_DIR:-$runtime_dir/state}"
+# QingLong sources shell tasks; without script arguments Bash can retain the filename as $1.
+case "${1:-}" in
+  "${BASH_SOURCE[0]}"|*/juejin-helper.sh|juejin-helper.sh) shift ;;
+esac
 mode="${1:-run}"
 case "$mode" in
   run|inspect|force) ;;
@@ -20,7 +24,7 @@ fi
 for name in COOKIE COOKIE_2 COOKIE_3 COOKIE_4 COOKIE_5 \
   AUTO_READ_ARTICLES READING_MAX_ARTICLES AUTO_LIKE_ARTICLES AUTO_LIKE_PINS \
   AUTO_COLLECT_ARTICLES AUTO_FOLLOW_USERS AUTO_CLAIM_LUCKY FOLLOW_USER_IDS COLLECTION_ID \
-  TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID TELEGRAM_MESSAGE_THREAD_ID TG_BOT_TOKEN TG_CHAT_ID TG_USER_ID \
+  TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID TELEGRAM_MESSAGE_THREAD_ID TELEGRAM_PROXY_URL TG_BOT_TOKEN TG_CHAT_ID TG_USER_ID \
   EMAIL_USER EMAIL_PASS EMAIL_TO DINGDING_WEBHOOK PUSHPLUS_TOKEN WEIXIN_WEBHOOK \
   SERVERPUSHKEY FEISHU_WEBHOOK BARK_WEBHOOK; do
   scoped_name="JUEJIN_$name"

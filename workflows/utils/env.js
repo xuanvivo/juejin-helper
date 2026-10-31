@@ -34,6 +34,7 @@ module.exports = {
   TELEGRAM_BOT_TOKEN: firstValue(env.TELEGRAM_BOT_TOKEN, env.TG_BOT_TOKEN),
   TELEGRAM_CHAT_ID: firstValue(env.TELEGRAM_CHAT_ID, env.TG_CHAT_ID, env.TG_USER_ID),
   TELEGRAM_MESSAGE_THREAD_ID: firstValue(env.TELEGRAM_MESSAGE_THREAD_ID),
+  TELEGRAM_PROXY_URL: firstValue(env.TELEGRAM_PROXY_URL),
   /**
    * 钉钉配置
    * https://open.dingtalk.com/document/robots/custom-robot-access

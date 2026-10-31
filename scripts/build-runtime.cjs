@@ -55,6 +55,7 @@ function buildRuntime(destination = path.join(root, "runtime")) {
         scripts: { checkin: "node workflows/checkin.js" },
         dependencies: {
           axios: workflow.dependencies.axios,
+          "https-proxy-agent": workflow.dependencies["https-proxy-agent"],
           "juejin-helper": "file:packages/juejin-helper",
           nodemailer: workflow.dependencies.nodemailer
         }

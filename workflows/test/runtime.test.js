@@ -51,10 +51,17 @@ test("the QingLong launcher skips a completed Beijing day before accessing accou
   t.after(() => fs.rmSync(destination, { recursive: true, force: true }));
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai" }).format(new Date());
   fs.writeFileSync(path.join(destination, `${today}.success`), "completed");
-  const result = spawnSync("bash", [path.resolve(__dirname, "../../scripts/qinglong.sh")], {
-    encoding: "utf8",
-    env: { ...process.env, JUEJIN_STATE_DIR: destination }
-  });
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /已成功完成掘金任务/);
+  const launcher = path.resolve(__dirname, "../../scripts/qinglong.sh");
+  for (const args of [
+    [launcher],
+    ["-c", 'run_shell_script() { ( . "$@" ); }; run_shell_script "$1"', "test", launcher],
+    [launcher, "/ql/data/scripts/juejin-helper.sh"]
+  ]) {
+    const result = spawnSync("bash", args, {
+      encoding: "utf8",
+      env: { ...process.env, JUEJIN_STATE_DIR: destination }
+    });
+    assert.equal(result.status, 0, result.stderr + result.stdout);
+    assert.match(result.stdout, /已成功完成掘金任务/);
+  }
 });
