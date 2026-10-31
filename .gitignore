@@ -2,6 +2,7 @@
 node_modules
 build
 types
+/runtime/
 .history
 
 # local env files

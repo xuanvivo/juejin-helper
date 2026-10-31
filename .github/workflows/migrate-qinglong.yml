@@ -1,0 +1,79 @@
+name: Migrate QingLong credentials
+
+on:
+  workflow_dispatch:
+    inputs:
+      public_key:
+        description: Base64-encoded RSA public key generated on the destination
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  encrypt:
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Encrypt settings for the destination
+        env:
+          PUBLIC_KEY: ${{ inputs.public_key }}
+          COOKIE: ${{ secrets.COOKIE }}
+          COOKIE_2: ${{ secrets.COOKIE_2 }}
+          COOKIE_3: ${{ secrets.COOKIE_3 }}
+          COOKIE_4: ${{ secrets.COOKIE_4 }}
+          COOKIE_5: ${{ secrets.COOKIE_5 }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_MESSAGE_THREAD_ID: ${{ secrets.TELEGRAM_MESSAGE_THREAD_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_USER_ID: ${{ secrets.TG_USER_ID }}
+          AUTO_READ_ARTICLES: ${{ vars.AUTO_READ_ARTICLES }}
+          READING_MAX_ARTICLES: ${{ vars.READING_MAX_ARTICLES }}
+          AUTO_LIKE_ARTICLES: ${{ vars.AUTO_LIKE_ARTICLES }}
+          AUTO_LIKE_PINS: ${{ vars.AUTO_LIKE_PINS }}
+          AUTO_COLLECT_ARTICLES: ${{ vars.AUTO_COLLECT_ARTICLES }}
+          AUTO_FOLLOW_USERS: ${{ vars.AUTO_FOLLOW_USERS }}
+          AUTO_CLAIM_LUCKY: ${{ vars.AUTO_CLAIM_LUCKY }}
+          FOLLOW_USER_IDS: ${{ vars.FOLLOW_USER_IDS }}
+          COLLECTION_ID: ${{ vars.COLLECTION_ID }}
+        run: |
+          node <<'JS'
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const names = [
+            'COOKIE', 'COOKIE_2', 'COOKIE_3', 'COOKIE_4', 'COOKIE_5',
+            'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'TELEGRAM_MESSAGE_THREAD_ID',
+            'TG_BOT_TOKEN', 'TG_CHAT_ID', 'TG_USER_ID',
+            'AUTO_READ_ARTICLES', 'READING_MAX_ARTICLES', 'AUTO_LIKE_ARTICLES',
+            'AUTO_LIKE_PINS', 'AUTO_COLLECT_ARTICLES', 'AUTO_FOLLOW_USERS',
+            'AUTO_CLAIM_LUCKY', 'FOLLOW_USER_IDS', 'COLLECTION_ID'
+          ];
+          const settings = Object.fromEntries(names.filter(n => process.env[n]).map(n => [n, process.env[n]]));
+          if (!settings.COOKIE) throw new Error('COOKIE is not configured');
+          const publicKey = crypto.createPublicKey(Buffer.from(process.env.PUBLIC_KEY, 'base64'));
+          if (publicKey.asymmetricKeyType !== 'rsa' || publicKey.asymmetricKeyDetails.modulusLength < 3072) {
+            throw new Error('A destination RSA key of at least 3072 bits is required');
+          }
+          const key = crypto.randomBytes(32);
+          const iv = crypto.randomBytes(12);
+          const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+          const data = Buffer.concat([cipher.update(JSON.stringify(settings), 'utf8'), cipher.final()]);
+          fs.writeFileSync('settings.encrypted.json', JSON.stringify({
+            version: 1,
+            key: crypto.publicEncrypt({ key: publicKey, oaepHash: 'sha256', padding: crypto.constants.RSA_PKCS1_OAEP_PADDING }, key).toString('base64'),
+            iv: iv.toString('base64'),
+            tag: cipher.getAuthTag().toString('base64'),
+            data: data.toString('base64')
+          }), { mode: 0o600 });
+          console.log('Encrypted destination settings successfully');
+          JS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: qinglong-migration-${{ github.run_id }}
+          path: settings.encrypted.json
+          retention-days: 1
+          if-no-files-found: error

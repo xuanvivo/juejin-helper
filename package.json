@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development rollup -cw",
     "build": "cross-env NODE_ENV=production rollup -c",
+    "build:runtime": "npm run build && node scripts/build-runtime.cjs",
     "test": "npm run test --workspace workflows",
     "checkin": "npm run checkin --workspace workflows",
     "clean": "rimraf \"packages/*/{build,types}\"",
