@@ -113,7 +113,9 @@ AUTO_FOLLOW_USERS=false COLLECTION_ID=你的收藏夹ID npm run checkin
 
 ## 定时运行
 
-仓库的 [Auto 工作流](../.github/workflows/auto.yml) 每天北京时间 06:30 调度，也支持手动选择 `run` 或 `inspect`；GitHub 排队可能延后执行时间。Actions 中把账号及通知凭据设为 Secrets，把各任务开关、篇数、作者名单及收藏夹 ID 设为普通 Variables。
+仓库的 [Auto 工作流](../.github/workflows/auto.yml) 每天北京时间 06:30 调度，并在 10:17、16:17、22:17 检查补跑。当天没有成功记录时执行任务；已有当天成功 artifact 时跳过依赖安装和任务执行。记录按北京时间日期区分，保留 3 天，只有任务及通知全部成功的 `run` 才写入；失败后可在备用时间补跑。手动 `run` 始终执行，`inspect` 不写入成功记录。所有运行共用并发组。
+
+GitHub 定时事件可能延迟或丢失，备用调度也依赖同一服务。公共仓库连续 60 天没有仓库活动时，GitHub 会禁用定时工作流，需在 Actions 页面重新启用。Actions 中把账号及通知凭据设为 Secrets，把各任务开关、篇数、作者名单及收藏夹 ID 设为普通 Variables。
 
 本机可以通过系统的定时任务调用 `npm run checkin`；工作目录应为仓库根目录，并向进程传入需要的环境变量。凭据管理方式应避免把值写进可公开读取的脚本或任务日志。
 

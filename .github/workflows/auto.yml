@@ -1,8 +1,10 @@
 name: Auto
+run-name: Auto · ${{ inputs.mode || 'run' }} · ${{ github.event_name }}
 
 on:
   schedule:
     - cron: "30 22 * * *" # 北京时间每天 06:30
+    - cron: "17 2,8,14 * * *" # 北京时间 10:17、16:17、22:17 备用检查
   workflow_dispatch:
     inputs:
       mode:
@@ -14,6 +16,7 @@ on:
         default: run
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -31,18 +34,31 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+      - name: Check daily completion
+        id: daily
+        uses: actions/github-script@v9
+        with:
+          retries: 3
+          script: |
+            const check = require('./.github/scripts/daily-schedule.cjs');
+            await check({ github, context, core });
       - uses: actions/setup-node@v7
+        if: steps.daily.outputs.should_run == 'true'
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
+        if: steps.daily.outputs.should_run == 'true'
         run: npm ci
       - name: Build local SDK
+        if: steps.daily.outputs.should_run == 'true'
         run: npm run build
       - name: Run offline tests
+        if: steps.daily.outputs.should_run == 'true'
         run: npm test
       - name: Run daily tasks
+        if: steps.daily.outputs.should_run == 'true'
         run: npm run checkin
         env:
           TASK_MODE: ${{ inputs.mode || 'run' }}
@@ -75,3 +91,15 @@ jobs:
           SERVERPUSHKEY: ${{ secrets.SERVERPUSHKEY }}
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
           BARK_WEBHOOK: ${{ secrets.BARK_WEBHOOK }}
+      - name: Write daily completion
+        if: steps.daily.outputs.should_run == 'true' && inputs.mode != 'inspect'
+        run: date -u +%FT%TZ > "$RUNNER_TEMP/juejin-daily-completed.txt"
+      - name: Save daily completion
+        if: steps.daily.outputs.should_run == 'true' && inputs.mode != 'inspect'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.daily.outputs.completion_name }}
+          path: ${{ runner.temp }}/juejin-daily-completed.txt
+          if-no-files-found: error
+          retention-days: 3
+          overwrite: true
